@@ -114,7 +114,7 @@ def plot_ndvi_collapse(csv_path, output_path):
     ax.set_xlabel('Temporal Axis (Years)', fontsize=14, fontname='Courier New', color='#CCCCCC')
 
     ax.grid(True, color='#333333', linestyle='--', linewidth=0.8, alpha=0.5)
-    ax.legend(loc='upper right', frameon=False, prop={'family': 'Courier New', 'size': 11})
+    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, prop={'family': 'Courier New', 'size': 11})
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
     ax.xaxis.set_major_locator(mdates.YearLocator())
 

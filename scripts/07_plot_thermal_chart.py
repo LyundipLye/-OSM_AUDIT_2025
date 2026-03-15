@@ -112,7 +112,7 @@ def render_thermodynamic_chart(csv_path, output_image_path):
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.tick_params(axis='both', which='major', labelsize=12, colors='#AAAAAA')
     ax.grid(True, color='#333333', linestyle='--', linewidth=0.8, alpha=0.5)
-    ax.legend(loc='upper left', frameon=False, prop={'family': 'Courier New', 'size': 11})
+    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, prop={'family': 'Courier New', 'size': 11})
 
     # 添加数据源署名
     fig.text(0.98, 0.02, 'Data: USGS Landsat 8 (TIRS) | Projection: EPSG:27700 | Author: H. Li', 
