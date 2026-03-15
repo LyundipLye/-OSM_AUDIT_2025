@@ -11,6 +11,7 @@ import matplotlib.dates as mdates
 import numpy as np
 import warnings
 from scipy import stats
+from scipy.signal import savgol_filter
 
 # Suppress interactive mode warnings for CLI execution
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib.figure")
@@ -31,10 +32,13 @@ def render_thermodynamic_chart(csv_path, output_image_path):
     print(f"Data points: {len(df)}")
 
     # ---------------------------------------------------------
-    # 线性回归与 95% 置信区间 (95% CI)
+    # 数据预处理与平滑 (Savitzky-Golay)
     # ---------------------------------------------------------
-    # 365D 滚动均线（消除季节性噪音）
-    df['Rolling_Mean'] = df['LST_Celsius'].rolling('365D', min_periods=1).mean()
+    # 线性插值填补云遮挡导致的缺失值
+    df_daily = df[['LST_Celsius']].resample('D').mean().interpolate(method='time').dropna()
+    
+    # Savitzky-Golay 滤波 (365天窗口，3阶多项式，保留季节性极值)
+    df_daily['LST_SG'] = savgol_filter(df_daily['LST_Celsius'], window_length=365, polyorder=3)
 
     # ---------------------------------------------------------
     # 线性回归与 95% 置信区间 (95% CI)
@@ -66,8 +70,8 @@ def render_thermodynamic_chart(csv_path, output_image_path):
     
     ax.scatter(df.index, df['LST_Celsius'], color='#888888', alpha=0.4, s=15, 
                label='Raw LST Observations (Cloud-masked)')
-    ax.plot(df.index, df['Rolling_Mean'], color='#FF8C00', linewidth=2.5, alpha=0.9, 
-            label='365-Day Rolling Mean (Seasonal Noise Removed)')
+    ax.plot(df_daily.index, df_daily['LST_SG'], color='#FF8C00', linewidth=2.5, alpha=0.9, 
+            label='Savitzky-Golay Filtered (Seasonal Noise Removed)')
             
     # 新增：合并了净增温和统计显著性的统一趋势线
     ax.plot(df.index, y_pred, color='#FF0000', linestyle='--', linewidth=3, 
