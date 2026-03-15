@@ -50,23 +50,23 @@ def plot_ndvi_collapse(csv_path, output_path):
     # 丢弃头尾全空的无效数据段
     df_daily = df_daily.dropna()
     
-    # 因为用户反馈 SG 滤波带有每年尖峰，不够直观，我们退回使用长周期滑动平均 (Rolling Mean) 
-    # 这样能更好拉直结构性衰减趋势线，过滤掉每年夏冬的季节性振幅
-    df_daily['NDVI_Trend'] = df_daily['NDVI'].rolling('365D', min_periods=90, center=True).mean()
+    # Savitzky-Golay 滤波 (相比于普通 Rolling Mean，更精确保留植被生长的季节性波峰波谷特征)
+    # Window size 365 days, Polynomial order 3
+    df_daily['NDVI_SG'] = savgol_filter(df_daily['NDVI'], window_length=365, polyorder=3)
 
     # 2018 基线 (使用原始NDVI数据计算)
     baseline_2018 = df_daily.loc['2018', 'NDVI'].mean()
 
     # Mann-Kendall 趋势检验 (对平滑后的数据进行检验)
-    mk_result = mk.original_test(df_daily['NDVI_Trend'].dropna())
+    mk_result = mk.original_test(df_daily['NDVI_SG'].dropna())
     print(f"Mann-Kendall test: trend={mk_result.trend}, p={mk_result.p:.6f}, "
           f"tau={mk_result.Tau:.4f}, slope={mk_result.slope:.6f}/obs")
 
     # 动态 Y 轴范围
-    ndvi_min_trend = df_daily['NDVI_Trend'].min()
+    ndvi_min_sg = df_daily['NDVI_SG'].min()
     ndvi_min_raw = df_sprawl['NDVI'].min()
     
-    y_low = min(ndvi_min_trend * 0.8, baseline_2018 * 0.6, ndvi_min_raw - 0.05)
+    y_low = min(ndvi_min_sg * 0.8, baseline_2018 * 0.6, ndvi_min_raw - 0.05)
     y_high = baseline_2018 * 1.2
 
     plt.style.use('dark_background')
@@ -75,10 +75,10 @@ def plot_ndvi_collapse(csv_path, output_path):
     ax.scatter(df_sprawl.index, df_sprawl['NDVI'], color='#555555', alpha=0.25, s=8, label='Raw (Seasonal Noise)')
     ax.axhline(y=baseline_2018, color='#00FFCC', linestyle='--', linewidth=3, 
                label=f'2018 Baseline (~{baseline_2018:.3f})')
-    ax.plot(df_daily.index, df_daily['NDVI_Trend'], color='#FF3333', linewidth=5, 
-            label='Structural Trend (365D Rolling Center)', alpha=0.95)
-    ax.fill_between(df_daily.index, df_daily['NDVI_Trend'], baseline_2018, 
-                    where=(df_daily['NDVI_Trend'] < baseline_2018), 
+    ax.plot(df_daily.index, df_daily['NDVI_SG'], color='#FF3333', linewidth=5, 
+            label='Structural Trend (365D Savitzky-Golay)', alpha=0.95)
+    ax.fill_between(df_daily.index, df_daily['NDVI_SG'], baseline_2018, 
+                    where=(df_daily['NDVI_SG'] < baseline_2018), 
                     color='#FF3333', alpha=0.25, interpolate=True, label='Permanent Loss')
 
     # Mann-Kendall 结果标注
