@@ -14,9 +14,9 @@ var macroRegion = sprawlZone.buffer(1500);
 // 2. 对照区：Sunbury 方向稳定绿地
 var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(250);
 
-// Landsat 8
+// Landsat 8（覆盖 sprawl + control 两个区域）
 var landsat8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-  .filterBounds(macroRegion)
+  .filterBounds(macroRegion.union(controlZone))
   .filterDate(START_DATE, END_DATE);
 
 function prepLST(image) {
