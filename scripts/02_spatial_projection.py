@@ -7,6 +7,7 @@ WGS84 GeoJSON -> EPSG:27700 面积计算 & 电力节点统计
 import json
 import os
 import logging
+from datetime import datetime
 from shapely.geometry import shape
 import pyproj
 from shapely.ops import transform
@@ -32,7 +33,11 @@ def run_spatial_audit(file_path):
         except json.JSONDecodeError:
             logger.error("Invalid JSON: %s", file_path)
             return 0.0, 0
-            
+
+    # 记录数据提取元信息
+    timestamp = data.get('osm3s', {}).get('timestamp_osm_base', 'unknown')
+    logger.info("OSM data timestamp: %s | File: %s", timestamp, os.path.basename(file_path))
+
     parking_area = 0.0
     power_nodes = 0
     
@@ -54,6 +59,8 @@ def run_spatial_audit(file_path):
     return parking_area, power_nodes
 
 if __name__ == "__main__":
+    logger.info("Audit executed: %s", datetime.now().strftime('%Y-%m-%d %H:%M'))
+
     shep_path = os.path.join(PROJECT_ROOT, 'data', 'raw_spatial', 'export_shepperton.geojson')
     long_path = os.path.join(PROJECT_ROOT, 'data', 'raw_spatial', 'export_longcross.geojson')
     
@@ -69,3 +76,5 @@ if __name__ == "__main__":
     logger.info("TOTAL SPRAWL:      %,.2f SQM", total_area)
     logger.info("LAND CONVERSION:   %,.4f Hectares", total_hectares)
     logger.info("POWER NODES:       %d", shep_pwr + long_pwr)
+    logger.info("NOTE: parking-only metric (amenity=parking). "
+                "EIA total floorspace = 164,000 sqm / green belt loss = 39 ha.")
