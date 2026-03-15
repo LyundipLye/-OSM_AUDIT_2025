@@ -29,10 +29,23 @@ def plot_ndvi_collapse(csv_path, output_path):
     # 数据预处理与高级信号滤波 (Savitzky-Golay)
     # ---------------------------------------------------------
     df['system:time_start'] = pd.to_datetime(df['system:time_start'])
+    
+    # 因为现在的 CSV 是综合输出的，我们需要分离 Sprawl_Core 和 Control_Zone 甚至是敏感分析点
+    if 'Sprawl_Zone_Core' not in df.columns:
+        print("[ERROR] CSV format invalid. Cannot find 'Sprawl_Zone_Core' column. Did you run the latest GEE script?")
+        return
+        
     df = df.sort_values('system:time_start').set_index('system:time_start')
     
+    # 提取 Sprawl Core 进行衰减绘图
+    df_sprawl = df[['Sprawl_Zone_Core']].copy()
+    df_sprawl.rename(columns={'Sprawl_Zone_Core': 'NDVI'}, inplace=True)
+    
+    # 提取 Control Zone 作为对照
+    df_control = df[['Control_Zone']].copy()
+    
     # 将离散的卫星过境数据重采样为连续的每日时间序列，并线性插值填补云遮挡导致的缺失值
-    df_daily = df[['NDVI']].resample('D').mean().interpolate(method='time')
+    df_daily = df_sprawl[['NDVI']].resample('D').mean().interpolate(method='time')
     
     # 丢弃头尾全空的无效数据段
     df_daily = df_daily.dropna()
@@ -50,14 +63,16 @@ def plot_ndvi_collapse(csv_path, output_path):
           f"tau={mk_result.Tau:.4f}, slope={mk_result.slope:.6f}/obs")
 
     # 动态 Y 轴范围
-    ndvi_min = df_daily['NDVI_SG'].min()
-    y_low = min(ndvi_min * 0.8, baseline_2018 * 0.6)
+    ndvi_min_sg = df_daily['NDVI_SG'].min()
+    ndvi_min_raw = df_sprawl['NDVI'].min()
+    
+    y_low = min(ndvi_min_sg * 0.8, baseline_2018 * 0.6, ndvi_min_raw - 0.05)
     y_high = baseline_2018 * 1.2
 
     plt.style.use('dark_background')
     fig, ax = plt.subplots(figsize=(14, 8), dpi=400)
 
-    ax.scatter(df.index, df['NDVI'], color='#555555', alpha=0.25, s=8, label='Raw (Seasonal Noise)')
+    ax.scatter(df_sprawl.index, df_sprawl['NDVI'], color='#555555', alpha=0.25, s=8, label='Raw (Seasonal Noise)')
     ax.axhline(y=baseline_2018, color='#00FFCC', linestyle='--', linewidth=3, 
                label=f'2018 Baseline (~{baseline_2018:.3f})')
     ax.plot(df_daily.index, df_daily['NDVI_SG'], color='#FF3333', linewidth=5, 

@@ -55,26 +55,43 @@ var ndviCollection = sentinel2.map(function(img) {
 }).select(['NDVI']);
 
 // ==============================================================================
-// 图表 1: Sprawl Zone vs Control Zone 对比
+// 统一输出合并图表 (用于一键 CSV 导出)
 // ==============================================================================
-var chartSprawl = ui.Chart.image.series(ndviCollection, sprawlZone, ee.Reducer.mean(), 10)
-  .setOptions({title: 'Sprawl Zone NDVI', vAxis: {min: 0, max: 0.8}, lineWidth: 2, pointSize: 3, colors: ['#FF3333']});
-var chartControl = ui.Chart.image.series(ndviCollection, controlZone, ee.Reducer.mean(), 10)
-  .setOptions({title: 'Control Zone NDVI (Undeveloped Reference)', vAxis: {min: 0, max: 0.8}, lineWidth: 2, pointSize: 3, colors: ['#33CC33']});
-print(chartSprawl);
-print(chartControl);
+// 既然需要做长期时序分析对比，最好的办法是把所有区域合并成一个FeatureCollection多序列输出
+var roiCollection = ee.FeatureCollection([
+  ee.Feature(sprawlZone, {label: 'Sprawl_Zone_Core'}),
+  ee.Feature(controlZone, {label: 'Control_Zone'}),
+  ee.Feature(sensitivity['Sprawl_North'], {label: 'Sprawl_North'}),
+  ee.Feature(sensitivity['Sprawl_South'], {label: 'Sprawl_South'}),
+  ee.Feature(sensitivity['Sprawl_East'], {label: 'Sprawl_East'}),
+  ee.Feature(sensitivity['Sprawl_West'], {label: 'Sprawl_West'})
+]);
 
-// ==============================================================================
-// 图表 2: 敏感性分析 — 多点同时展示
-// ==============================================================================
-var sensKeys = Object.keys(sensitivity);
-for (var i = 0; i < sensKeys.length; i++) {
-  var key = sensKeys[i];
-  var color = key === 'Control' ? '#33CC33' : '#FF3333';
-  var chart = ui.Chart.image.series(ndviCollection, sensitivity[key], ee.Reducer.mean(), 10)
-    .setOptions({title: 'Sensitivity: ' + key, vAxis: {min: 0, max: 0.8}, lineWidth: 1, pointSize: 2, colors: [color]});
-  print(chart);
-}
+var consolidatedChart = ui.Chart.image.seriesByRegion({
+  imageCollection: ndviCollection,
+  regions: roiCollection,
+  reducer: ee.Reducer.mean(),
+  band: 'NDVI',
+  scale: 10,
+  xProperty: 'system:time_start',
+  seriesProperty: 'label'
+}).setOptions({
+  title: 'Consolidated NDVI Time Series (Sprawl vs Control & Cardinal Points)',
+  vAxis: {title: 'NDVI', min: 0, max: 0.8},
+  lineWidth: 1, 
+  pointSize: 2,
+  series: {
+    0: {color: '#FF0000', lineWidth: 2, pointSize: 3}, // Sprawl_Core (Red bold)
+    1: {color: '#00FF00', lineWidth: 2, pointSize: 3}, // Control (Green bold)
+    2: {color: '#FFAAAA'}, // North (Light red)
+    3: {color: '#FFAAAA'}, // South 
+    4: {color: '#FFAAAA'}, // East
+    5: {color: '#FFAAAA'}  // West
+  }
+});
+
+print("【ACTION REQUIRED】 Click the pop-out arrow in the top right of this chart to download the single 'ee-chart.csv'");
+print(consolidatedChart);
 
 // ==============================================================================
 // 损失图（2018基线 vs 近期）
