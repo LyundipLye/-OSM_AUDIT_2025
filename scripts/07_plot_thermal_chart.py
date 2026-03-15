@@ -102,6 +102,6 @@ def render_thermodynamic_chart(csv_path, output_image_path):
         plt.show(block=False)
 
 if __name__ == "__main__":
-    input_csv = os.path.join(PROJECT_ROOT, 'data', 'raw_telemetry', 'ee-chart.csv')
+    input_csv = os.path.join(PROJECT_ROOT, 'data', 'raw_telemetry', 'ee-chart_lst.csv')
     output_png = os.path.join(PROJECT_ROOT, 'visualisations', 'thermodynamic_scar_chart.png')
     render_thermodynamic_chart(input_csv, output_png)

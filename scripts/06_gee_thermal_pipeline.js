@@ -56,6 +56,8 @@ var chartSprawl = ui.Chart.image.series({
   lineWidth: 0, pointSize: 4, colors: ['#FF4500'], 
   trendlines: {0: {color: 'red', lineWidth: 2, opacity: 0.8, showR2: true}}
 });
+print("【ACTION REQUIRED】 Click the pop-out arrow in the top right of this chart to download the CSV data.");
+print("⚠️ Please rename the downloaded file to: ee-chart_lst.csv when placing it in the raw_telemetry/ folder.");
 print(chartSprawl);
 
 var chartControl = ui.Chart.image.series({

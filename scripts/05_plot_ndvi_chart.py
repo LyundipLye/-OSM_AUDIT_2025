@@ -113,6 +113,6 @@ def plot_ndvi_collapse(csv_path, output_path):
 
 
 if __name__ == "__main__":
-    input_csv = os.path.join(PROJECT_ROOT, 'data', 'raw_telemetry', 'ee-chart_ndvi_2018_2026.csv')
+    input_csv = os.path.join(PROJECT_ROOT, 'data', 'raw_telemetry', 'ee-chart_ndvi.csv')
     output_png = os.path.join(PROJECT_ROOT, 'visualisations', 'NDVICollapseChart.png')
     plot_ndvi_collapse(input_csv, output_png)
