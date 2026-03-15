@@ -5,7 +5,7 @@
 # 
 # 前置条件:
 #   1. pip install -r requirements.txt
-#   2. GEE 脚本 (04, 06a) 需要在 GEE Code Editor 中手动执行
+#   2. GEE 脚本 (04, 06) 需要在 GEE Code Editor 中手动执行
 #      并将 CSV 导出到 data/raw_telemetry/
 #   3. OSM 数据已通过 01_osm_extraction.ql（Overpass Turbo）下载到 data/raw_spatial/
 # ==============================================================================
@@ -40,5 +40,5 @@ echo "=================================================="
 echo ""
 echo "Manual steps remaining:"
 echo "  - Run 04_gee_ndvi_pipeline.js in GEE Code Editor"
-echo "  - Run 06a_gee_thermal_audit.js in GEE Code Editor"
-echo "  - Run 06_thermal_chart.py after exporting LST CSV from GEE"
+echo "  - Run 06_gee_thermal_pipeline.js in GEE Code Editor"
+echo "  - Run 07_plot_thermal_chart.py after exporting LST CSV from GEE"

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-06_thermal_chart.py
+07_plot_thermal_chart.py
 GEE 导出的 LST CSV -> 365D 滚动均线 + 线性回归趋势线
 """
 

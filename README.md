@@ -44,9 +44,9 @@ The repository is structured around a multi-scalar audit pipeline, transitioning
 
 - **`05_plot_ndvi_chart.py`** (Python): Processes the GEE time-series CSV data. It applies a 365-day rolling mean algorithm using `pandas` to eliminate seasonal meteorological noise, thereby isolating the structural trajectory of ecological degradation.
 
-- **`06a_gee_thermal_audit.js`** (Google Earth Engine API): Interfaces with the USGS Landsat 8 Collection 2 (TIRS) thermal infrared sensor. The algorithm applies QA_PIXEL bitwise cloud-masking, converts raw thermal DN to Land Surface Temperature (LST) in Celsius, and constructs a relative Urban Heat Island (UHI) anomaly map comparing pre-construction (2017) and post-construction (2024) summer composites to isolate the net thermodynamic scar.
+- **`06_gee_thermal_pipeline.js`** (Google Earth Engine API): Interfaces with the USGS Landsat 8 Collection 2 (TIRS) thermal infrared sensor. The algorithm applies QA_PIXEL bitwise cloud-masking, converts raw thermal DN to Land Surface Temperature (LST) in Celsius, and constructs a relative Urban Heat Island (UHI) anomaly map comparing pre-construction (2017) and post-construction (2024) summer composites to isolate the net thermodynamic scar.
 
-- **`06_thermal_chart.py`** (Python): Processes the LST CSV data exported from the GEE thermal audit. Applies a 365-day rolling mean and linear regression model to visualise the structural thermal escalation trend.
+- **`07_plot_thermal_chart.py`** (Python): Processes the LST CSV data exported from the GEE thermal audit. Applies a 365-day rolling mean and linear regression model to visualise the structural thermal escalation trend.
 
 ### Phase III: Institutional Governance & Discourse Audit
 
@@ -74,8 +74,8 @@ OSM_AUDIT_2025/
 │   ├── 03_kepler_formatter.py  #   Kepler.gl CSV generation with projected areas
 │   ├── 04_gee_ndvi_pipeline.js #   GEE Sentinel-2 NDVI time-series (run in GEE Code Editor)
 │   ├── 05_plot_ndvi_chart.py   #   NDVI structural trend visualisation
-│   ├── 06a_gee_thermal_audit.js#   GEE Landsat 8 LST audit (run in GEE Code Editor)
-│   └── 06_thermal_chart.py     #   LST trend visualisation (local Python)
+│   ├── 06_gee_thermal_pipeline.js# GEE Landsat 8 LST audit (run in GEE Code Editor)
+│   └── 07_plot_thermal_chart.py#   LST trend visualisation (local Python)
 ├── data/
 │   ├── raw_spatial/            #   Raw GeoJSON vectors (WGS84)
 │   ├── raw_telemetry/          #   Satellite telemetry CSVs from GEE
@@ -100,7 +100,7 @@ pip install -r requirements.txt
 
 **Remote Sensing Execution:**
 
-The GEE scripts (`scripts/04_gee_ndvi_pipeline.js` and `scripts/06a_gee_thermal_audit.js`) are designed for native execution within the [Google Earth Engine Code Editor](https://code.earthengine.google.com/). Users require an authenticated Google Cloud Project (GCP) environment.
+The GEE scripts (`scripts/04_gee_ndvi_pipeline.js` and `scripts/06_gee_thermal_pipeline.js`) are designed for native execution within the [Google Earth Engine Code Editor](https://code.earthengine.google.com/). Users require an authenticated Google Cloud Project (GCP) environment.
 
 ## 6. Citation and Licensing
 
