@@ -1,24 +1,22 @@
 // ==============================================================================
-// OSM_AUDIT_2025: THERMODYNAMIC SPATIAL AUDIT (v3 — Triple-Satellite + NDBI Mask)
-// Landsat 7 ETM+ (60m) + Landsat 8 C2 (100m) + Landsat 9 C2 (100m) — NDBI-filtered LST
+// OSM_AUDIT_2025: THERMODYNAMIC SPATIAL AUDIT (v4 — Triple-Satellite Paired BACI)
+// Landsat 7 ETM+ (60m) + Landsat 8 C2 (100m) + Landsat 9 C2 (100m)
+// 无 NDBI 掩膜 — 纯粹的 Paired Before-After-Control-Impact 设计
 // ==============================================================================
 
 // ⚠️ Update END_DATE before each run
 var START_DATE = '2015-01-01';
 var END_DATE   = '2026-03-15';  // <-- UPDATE ME
 
-// 1. Sprawl Zone — VP Studio 精确多边形边界（9 顶点，取代圆形缓冲区）
-// 圆形 buffer 会混入旁边的居民楼和绿地（施工后降温），严重稀释热信号
+// 1. Impact Zone — 单一新建停车场精确多边形（5 顶点）
+// 不使用 NDBI 掩膜：直接测量同一块地 绿地→沥青 的全过程温度变化
+// 这是教科书级的 Paired BACI 设计：消除 MAUP（可变面积单元）问题
 var sprawlZone = ee.Geometry.Polygon([[
-  [-0.4758927487043363, 51.41217153384681],
-  [-0.47417613493480504, 51.409200313379166],
-  [-0.4710862301496488, 51.40735324117383],
-  [-0.47027083860912144, 51.405479323562865],
-  [-0.4644343517927152, 51.40454233596011],
-  [-0.45975657927074254, 51.40778155441695],
-  [-0.4637047909406644, 51.40791540148267],
-  [-0.4710862301496488, 51.412225067579875],
-  [-0.4758927487043363, 51.41217153384681]
+  [-0.4676848515978538, 51.40882742185046],
+  [-0.4669123754015647, 51.409429716784295],
+  [-0.46926006378714025, 51.41065315692719],
+  [-0.4703222185570377, 51.40986350085904],
+  [-0.4676848515978538, 51.40882742185046]
 ]]);
 var macroRegion = sprawlZone.buffer(1500);
 
@@ -115,13 +113,13 @@ function prepL9(image) {
 var lstCollection = landsat7.map(prepL7)
   .merge(landsat8.map(prepL8))
   .merge(landsat9.map(prepL9))
-  .select(['LST_Celsius', 'NDBI'])
+  .select(['LST_Celsius'])
   .sort('system:time_start');
 
 print('Total scenes (L7+L8+L9):', lstCollection.size());
 
 // ==============================================================================
-// 时序提取 — NDBI 掩膜：只提取不透水面 (NDBI > 0) 的温度
+// 时序提取 — Paired BACI：无 NDBI 掩膜，直接测量全像素温度
 // ==============================================================================
 var roiCollection = ee.FeatureCollection([
   ee.Feature(sprawlZone, {label: 'Sprawl_Zone_Core'}),
@@ -129,26 +127,20 @@ var roiCollection = ee.FeatureCollection([
 ]);
 
 var extractStats = function(image) {
-  // 对 Sprawl Zone：只取 NDBI > 0 的像素（不透水面/建筑物）
-  var imperviousMask = image.select('NDBI').gt(0);
-  var lstImpervious = image.select('LST_Celsius').updateMask(imperviousMask);
+  // Paired BACI：不加任何 NDBI 掩膜，直接测量同一块地的全像素温度
+  // 施工前 = 绿地温度，施工后 = 沥青温度，前后差异即为因果效应
+  var lst = image.select('LST_Celsius');
   
-  // 对 Control Zone：不加 NDBI 掩膜（公园是绿地，NDBI < 0 正常）
-  var lstRaw = image.select('LST_Celsius');
-  
-  // ⚠️ 关键修复：使用独立的单 Reducer 而非 combined Reducer
-  // combined reducer 在全像素被掩膜时返回空字典 {}（无任何 key），导致 .get() 崩溃
-  // 单 Reducer 对单波段始终返回 {bandName: null}，key 一定存在
-  var spMean = lstImpervious.reduceRegion({
+  var spMean = lst.reduceRegion({
     reducer: ee.Reducer.mean(), geometry: sprawlZone, scale: 30, bestEffort: true
   });
-  var spStd = lstImpervious.reduceRegion({
+  var spStd = lst.reduceRegion({
     reducer: ee.Reducer.stdDev(), geometry: sprawlZone, scale: 30, bestEffort: true
   });
-  var ctMean = lstRaw.reduceRegion({
+  var ctMean = lst.reduceRegion({
     reducer: ee.Reducer.mean(), geometry: controlZone, scale: 30, bestEffort: true
   });
-  var ctStd = lstRaw.reduceRegion({
+  var ctStd = lst.reduceRegion({
     reducer: ee.Reducer.stdDev(), geometry: controlZone, scale: 30, bestEffort: true
   });
   
