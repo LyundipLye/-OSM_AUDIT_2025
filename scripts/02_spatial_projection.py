@@ -70,11 +70,11 @@ if __name__ == "__main__":
     total_area = shep_area + long_area
     total_hectares = total_area / 10000
     
-    logger.info("SHEPPERTON: %,.2f SQM | Nodes: %d", shep_area, shep_pwr)
-    logger.info("LONGCROSS:  %,.2f SQM | Nodes: %d", long_area, long_pwr)
+    logger.info("SHEPPERTON: %s SQM | Nodes: %d", f"{shep_area:,.2f}", shep_pwr)
+    logger.info("LONGCROSS:  %s SQM | Nodes: %d", f"{long_area:,.2f}", long_pwr)
     logger.info("-" * 50)
-    logger.info("TOTAL SPRAWL:      %,.2f SQM", total_area)
-    logger.info("LAND CONVERSION:   %,.4f Hectares", total_hectares)
+    logger.info("TOTAL SPRAWL:      %s SQM", f"{total_area:,.2f}")
+    logger.info("LAND CONVERSION:   %s Hectares", f"{total_hectares:,.4f}")
     logger.info("POWER NODES:       %d", shep_pwr + long_pwr)
     logger.info("NOTE: parking-only metric (amenity=parking). "
                 "EIA total floorspace = 164,000 sqm / green belt loss = 39 ha.")

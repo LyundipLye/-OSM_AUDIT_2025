@@ -12,7 +12,7 @@ var sprawlZone = ee.Geometry.Point([-0.469366, 51.410315]).buffer(250);
 var macroRegion = sprawlZone.buffer(1500);
 
 // 2. 对照区：Sunbury 方向稳定绿地
-var controlZone = ee.Geometry.Point([-0.4180, 51.4110]).buffer(250);
+var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(250);
 
 // Landsat 8
 var landsat8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")

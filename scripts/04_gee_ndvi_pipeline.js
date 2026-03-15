@@ -15,7 +15,7 @@ var analysisBuffer = shepperton.buffer(1000);
 var sprawlZone = ee.Geometry.Point([-0.469366, 51.410315]).buffer(100);
 
 // 3. 对照区：Sunbury 方向未开发的稳定绿地（距 Shepperton ~2km，无大型开发）
-var controlZone = ee.Geometry.Point([-0.4180, 51.4110]).buffer(100);
+var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(100);
 
 // 4. 敏感性分析点：围绕 sprawl zone 不同方位取样
 var sensitivity = {
@@ -23,7 +23,7 @@ var sensitivity = {
   'Sprawl_North': ee.Geometry.Point([-0.469366, 51.411500]).buffer(100),
   'Sprawl_South': ee.Geometry.Point([-0.469366, 51.409100]).buffer(100),
   'Sprawl_East':  ee.Geometry.Point([-0.467000, 51.410315]).buffer(100),
-  'Control':      ee.Geometry.Point([-0.4180,   51.4110  ]).buffer(100)
+  'Control':      ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(100)
 };
 
 // Sentinel-2

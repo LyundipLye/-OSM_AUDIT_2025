@@ -50,7 +50,7 @@ def plot_ndvi_collapse(csv_path, output_path):
                     color='#FF3333', alpha=0.25, interpolate=True, label='Permanent Loss')
 
     # Mann-Kendall 结果标注
-    sig = '✓ Significant' if mk_result.p < 0.05 else '✗ Not Significant'
+    sig = 'Significant' if mk_result.p < 0.05 else 'Not Significant'
     mk_label = f'Mann-Kendall: τ={mk_result.Tau:.3f}, p={mk_result.p:.4f} ({sig})'
     ax.text(0.02, 0.02, mk_label, transform=ax.transAxes, fontsize=11,
             fontfamily='Courier New', color='#FFCC00',
