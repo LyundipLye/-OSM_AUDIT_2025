@@ -30,18 +30,34 @@ To ensure scientific rigor, this project employs a triangulated approach combini
 
 **Objective:** To empirically quantify logistical sprawl by bypassing corporate-curated spatial data.
 
-- **`01_osm_extraction.ql`** (Overpass QL): Executes a radius-constrained extraction (1200m) around the Shepperton coordinates via the Overpass API. Targets industrial geometries, power infrastructure, and newly concreted logistical surfaces (`amenity=parking`).
-- **`02_spatial_projection.py`** (Python): Ingests raw WGS84 GeoJSON datasets. Utilising `shapely` and `pyproj`, the script re-projects angular global coordinates into the British National Grid (EPSG:27700). This cartographic transformation is critical for calculating exact planar areas (square metres) with an error margin of <0.1%.
-- **`03_kepler_formatter.py`** (Python): Formats geometries into CSV points with pre-calculated intensity metrics for 3D Kepler.gl heatmapping.
+- **`01_osm_extraction.ql`** (Overpass QL): 
+  - **Logic**: Executes a radius-constrained extraction (1200m) around the Shepperton coordinates via the Overpass API. Targets industrial geometries, power infrastructure (132kV transformers), and newly concreted logistical surfaces (`amenity=parking`).
+- **`02_spatial_projection.py`** (Python): 
+  - **Logic**: Ingests WGS84 GeoJSON satellite vectors. Utilising `shapely.geometry` and `pyproj.Transformer`, the script mathematically transforms angular geographic coordinates into the British National Grid (EPSG:27700) Cartesian plane.
+  - **Why this matters**: Calculating areas directly in WGS84 introduces severe spherical distortions. Projecting to EPSG:27700 allows the script to compute exact planar land-conversion metrics (in square metres) with an error margin of <0.1%.
+- **`03_kepler_formatter.py`** (Python): 
+  - **Logic**: Iterates over projected spatial geometries, calculating their centroids and planar areas. Exports a rigorously formatted CSV infused with intensity weightings designed specifically for 3D extrusion rendering in Kepler.gl.
 
 ### Phase II: Earth Observation & Metabolic Quantification
 
 **Objective:** To measure the longitudinal biophysical and thermodynamic alterations in the audited zone, rigorously controlled against nearby undeveloped greenbelts.
 
-- **`04_gee_ndvi_pipeline.js`** (GEE API): Interfaces with ESA Sentinel-2 multispectral satellites to calculate the Normalised Difference Vegetation Index (NDVI) over an 8-year temporal axis. **Algorithm Refinement**: Implements dual-layer cloud masking using both QA60 bitmask and the SCL (Scene Classification Layer) to strictly filter shadows and cirrus clouds. Incorporates a 4-point cardinal sensitivity analysis around the sprawl core.
-- **`05_plot_ndvi_chart.py`** (Python): Applies a 365-day rolling mean to the Sentinel-2 NDVI telemetry to eliminate seasonal meteorological noise. Automatically runs a **Mann-Kendall Autocorrelation Test** (via `pymannkendall`) to mathematically prove the statistical significance (p < 0.001) of the ecological collapse.
-- **`06_gee_thermal_pipeline.js`** (GEE API): Interfaces with the USGS Landsat 8 (TIRS) sensor. **Algorithm Refinement**: Advanced thermal cloud masking using QA_PIXEL (filtering dilated clouds, cirrus, and snow). Constructs relative Urban Heat Island (UHI) anomaly maps by comparing 3-year summer composites (2016-2018 vs 2023-2025) to isolate the net thermodynamic scar while filtering out single-year weather anomalies.
-- **`07_plot_thermal_chart.py`** (Python): Processes LST telemetry, generating a 365-day smoothed structural heating trajectory mapped against a 1st-degree polynomial regression line.
+- **`04_gee_ndvi_pipeline.js`** (Google Earth Engine API - JavaScript): 
+  - **Logic**: Interfaces with the ESA Sentinel-2 (S2_SR_HARMONIZED) multispectral constellation. Extracts the Normalised Difference Vegetation Index (NDVI) across an 8-year temporal axis.
+  - **Algorithm Highlight**: Implements a dual-layer cloud masking function using both the QA60 bitmask and the advanced SCL (Scene Classification Layer) to strictly filter cloud shadows, cirrus bands, and snow, guaranteeing uncorrupted chlorophyll reflectance values. Incorporates a 4-point cardinal sensitivity analysis to prove spatial consistency.
+- **`05_plot_ndvi_chart.py`** (Python): 
+  - **Logic**: Ingests the raw NDVI telemetry CSV from GEE. 
+  - **Algorithm Highlight**: Employs a 3rd-order Savitzky-Golay signal filter (`scipy.signal.savgol_filter`, window=365 days). Unlike a primitive rolling mean, this DSP technique preserves the peak amplitude of seasonal vegetation phenology while isolating the permanent structural baseline collapse. Applies a rigorous Non-Parametric Mann-Kendall test (`pymannkendall`) to mathematically verify the statistical significance of the degradation.
+- **`06_gee_thermal_pipeline.js`** (Google Earth Engine API - JavaScript): 
+  - **Logic**: Interfaces with the USGS Landsat 8 (TIRS) thermal sensor. 
+  - **Algorithm Highlight**: Performs deep bitwise QA_PIXEL masking (filtering dilated clouds, cirrus, and snow) and converts raw Digital Numbers (DN) to Land Surface Temperature (LST) in Celsius. To eliminate single-year climate anomalies (e.g., an unusually hot summer in 2024), it constructs robust Urban Heat Island (UHI) anomaly composites by averaging 3 entire summers (2016-2018 vs. 2023-2025).
+- **`07_plot_thermal_chart.py`** (Python): 
+  - **Logic**: Computes a 1st-degree polynomial linear regression (`scipy.stats.linregress`) on the LST telemetry to model the thermodynamic trajectory. Extrapolates a 95% Confidence Interval band to statistically validate that the +5°C localized heat escalation is a permanent structural consequence of algorithmic metabolism, not random meteorological variance.
+
+### Inter-Pipeline Automation (`run_pipeline.sh`)
+While the Google Earth Engine scripts (`04`, `06`) must be executed natively in the GEE cloud to leverage Google's server-side computation (downloading terabytes of raw satellite imagery locally is computationally unfeasible), the entire local analytical workflow is fully automated.
+
+Executing `./scripts/run_pipeline.sh` automatically daisy-chains the spatial reprojection (`02`), geospatial formatting (`03`), and advanced statistical rendering (`05`, `07`), producing presentation-ready analytics instantly once the raw CSV telemetry is placed in the required folder.
 
 ### Phase III: Institutional Governance & Discourse Audit
 
