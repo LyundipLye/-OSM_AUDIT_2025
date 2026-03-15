@@ -123,33 +123,30 @@ var extractStats = function(image) {
   var imperviousMask = image.select('NDBI').gt(0);
   var lstImpervious = image.select('LST_Celsius').updateMask(imperviousMask);
   
-  // 对 Control Zone：不加 NDBI 掩膜（公园本来就是绿地，NDBI < 0 是正常的）
+  // 对 Control Zone：不加 NDBI 掩膜（公园是绿地，NDBI < 0 正常）
   var lstRaw = image.select('LST_Celsius');
   
-  // 安全默认值：NDBI 掩膜可能滤掉全部像素（施工前该区域还是绿地）
-  var defaults = ee.Dictionary({mean: null, stdDev: null});
-  
-  // Sprawl Zone: 只有不透水面的温度（空结果回退为 null）
-  var spStats = defaults.combine(lstImpervious.reduceRegion({
-    reducer: ee.Reducer.mean().combine({reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
-    geometry: sprawlZone,
-    scale: 30,
-    bestEffort: true
-  }));
-  
-  // Control Zone: 全区域温度
-  var ctStats = defaults.combine(lstRaw.reduceRegion({
-    reducer: ee.Reducer.mean().combine({reducer2: ee.Reducer.stdDev(), sharedInputs: true}),
-    geometry: controlZone,
-    scale: 30,
-    bestEffort: true
-  }));
+  // ⚠️ 关键修复：使用独立的单 Reducer 而非 combined Reducer
+  // combined reducer 在全像素被掩膜时返回空字典 {}（无任何 key），导致 .get() 崩溃
+  // 单 Reducer 对单波段始终返回 {bandName: null}，key 一定存在
+  var spMean = lstImpervious.reduceRegion({
+    reducer: ee.Reducer.mean(), geometry: sprawlZone, scale: 30, bestEffort: true
+  });
+  var spStd = lstImpervious.reduceRegion({
+    reducer: ee.Reducer.stdDev(), geometry: sprawlZone, scale: 30, bestEffort: true
+  });
+  var ctMean = lstRaw.reduceRegion({
+    reducer: ee.Reducer.mean(), geometry: controlZone, scale: 30, bestEffort: true
+  });
+  var ctStd = lstRaw.reduceRegion({
+    reducer: ee.Reducer.stdDev(), geometry: controlZone, scale: 30, bestEffort: true
+  });
   
   return ee.Feature(null, {
-    'Sprawl_Zone_Core_mean': spStats.get('mean'),
-    'Sprawl_Zone_Core_std': spStats.get('stdDev'),
-    'Control_Zone_mean': ctStats.get('mean'),
-    'Control_Zone_std': ctStats.get('stdDev')
+    'Sprawl_Zone_Core_mean': spMean.get('LST_Celsius'),
+    'Sprawl_Zone_Core_std':  spStd.get('LST_Celsius'),
+    'Control_Zone_mean':     ctMean.get('LST_Celsius'),
+    'Control_Zone_std':      ctStd.get('LST_Celsius')
   }).set('system:time_start', image.get('system:time_start'));
 };
 
