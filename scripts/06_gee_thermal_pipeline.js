@@ -8,11 +8,13 @@ var START_DATE = '2015-01-01';
 var END_DATE   = '2026-03-15';  // <-- UPDATE ME
 
 // 1. Sprawl Zone（新建停车场，EIA Zone C）
-var sprawlZone = ee.Geometry.Point([-0.469366, 51.410315]).buffer(250); 
+// Buffer=150m：Landsat 8 TIRS 热红外原生分辨率 100m，150m 半径 ≈ 7 个原生像素，
+// 兼顾统计稳定性和空间聚焦（250m 过大会稀释热信号）
+var sprawlZone = ee.Geometry.Point([-0.469366, 51.410315]).buffer(150); 
 var macroRegion = sprawlZone.buffer(1500);
 
-// 2. 对照区
-var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(250);
+// 2. 对照区（与 NDVI 管线完全一致的坐标）
+var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(150);
 
 // 包围两个区域的矩形（避免 GEE union 误差问题）
 var combinedBounds = ee.Geometry.Rectangle([-0.48, 51.40, -0.40, 51.42]);
