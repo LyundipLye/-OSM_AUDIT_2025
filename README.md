@@ -24,7 +24,7 @@ The analytical pipeline is grounded in three core political-economic paradigms:
 
 ## 2. Methodological Architecture
 
-To ensure scientific rigor, this project employs a triangulated approach combining OSM topological tracing, multi-spectral Earth Observation, and local governance dossier reviews. A strict **Control Zone** methodology and **Mann-Kendall Statistical Significance Testing** are implemented to isolate infrastructural impact from regional climate trends.
+To ensure scientific rigor, this project employs a triangulated approach combining OSM topological tracing, multi-spectral Earth Observation, and local governance dossier reviews. A strict **Difference-in-Differences (DiD)** methodology, **Seasonal Mann-Kendall Statistical Significance Testing**, and **Pixel-Level Uncertainty Quantification (UQ)** are meticulously implemented to mathematically isolate localized infrastructural impact from global climate trends and biological autocorrelation.
 
 ### Phase I: Geomatic Extraction & Topological Normalisation
 
@@ -43,16 +43,16 @@ To ensure scientific rigor, this project employs a triangulated approach combini
 **Objective:** To measure the longitudinal biophysical and thermodynamic alterations in the audited zone, rigorously controlled against nearby undeveloped greenbelts.
 
 - **`04_gee_ndvi_pipeline.js`** (Google Earth Engine API - JavaScript): 
-  - **Logic**: Interfaces with the ESA Sentinel-2 (S2_SR_HARMONIZED) multispectral constellation. Extracts the Normalised Difference Vegetation Index (NDVI) across an 8-year temporal axis.
-  - **Algorithm Highlight**: Implements a dual-layer cloud masking function using both the QA60 bitmask and the advanced SCL (Scene Classification Layer) to strictly filter cloud shadows, cirrus bands, and snow, guaranteeing uncorrupted chlorophyll reflectance values. Incorporates a 4-point cardinal sensitivity analysis to prove spatial consistency.
+  - **Logic**: Interfaces with the ESA Sentinel-2 (S2_SR_HARMONIZED) multispectral constellation. Extracts the Normalised Difference Vegetation Index (NDVI), calculating both geometric spatial means and pixel-level standard deviations (`stdDev`) across an 8-year temporal axis.
+  - **Algorithm Highlight**: Implements a dual-layer cloud masking function using both the QA60 bitmask and the advanced SCL (Scene Classification Layer) to strictly filter cloud shadows, cirrus bands, and snow. Pivotally exports spatial variance telemetry in Wide-Format for Academic Uncertainty Quantification (UQ).
 - **`05_plot_ndvi_chart.py`** (Python): 
   - **Logic**: Ingests the raw NDVI telemetry CSV from GEE. 
-  - **Algorithm Highlight**: Employs a 3rd-order Savitzky-Golay signal filter (`scipy.signal.savgol_filter`, window=365 days). Unlike a primitive rolling mean, this DSP technique preserves the peak amplitude of seasonal vegetation phenology while isolating the permanent structural baseline collapse. Applies a rigorous Non-Parametric Mann-Kendall test (`pymannkendall`) to mathematically verify the statistical significance of the degradation.
+  - **Algorithm Highlight**: Employs a 3rd-order Savitzky-Golay signal filter (`scipy.signal.savgol_filter`, window=365 days) to preserve peak amplitude of seasonal vegetation phenology. Utilizes **Difference-in-Differences (DiD)** against the Control Zone greenbelt to calculate the net anthropogenic signal ($\Delta$ NDVI). Applies a rigorous Non-Parametric **Seasonal Mann-Kendall test** (`pymannkendall`, `period=365`) to algebraically neutralize biological autocorrelation and verify the degradation core. Renders a $\pm 1 \sigma$ semi-transparent error band encapsulating spatial variance (UQ) for ultimate empirical defense.
 - **`06_gee_thermal_pipeline.js`** (Google Earth Engine API - JavaScript): 
   - **Logic**: Interfaces with the USGS Landsat 8 (TIRS) thermal sensor. 
-  - **Algorithm Highlight**: Performs deep bitwise QA_PIXEL masking (filtering dilated clouds, cirrus, and snow) and converts raw Digital Numbers (DN) to Land Surface Temperature (LST) in Celsius. To eliminate single-year climate anomalies (e.g., an unusually hot summer in 2024), it constructs robust Urban Heat Island (UHI) anomaly composites by averaging 3 entire summers (2016-2018 vs. 2023-2025).
+  - **Algorithm Highlight**: Performs deep bitwise QA_PIXEL masking (filtering dilated clouds, cirrus, and snow) and converts raw Digital Numbers (DN) to Land Surface Temperature (LST). Explicitly extracts pixel-level spatial standard deviation to power downstream UQ, alongside calculating robust Urban Heat Island (UHI) anomaly composites by averaging 3 entire summers (2016-2018 vs. 2023-2025).
 - **`07_plot_thermal_chart.py`** (Python): 
-  - **Algorithm Highlight**: Computes a 1st-degree polynomial linear regression (`scipy.stats.linregress`) on the LST telemetry to model the thermodynamic trajectory. Extrapolates a 95% Confidence Interval band to statistically validate that the +5°C localized heat escalation is a permanent structural consequence of algorithmic metabolism. The underlying signal is smoothed via a Savitzky-Golay polynomial convolution filter; unlike simple rolling means, SG strictly preserves the amplitude of extreme thermal values. In thermodynamic terms, this perfectly traces the Earth's annual orbital solar cycle, resulting in an accurate and mathematically sound sinusoidal wave (夏至/冬至 oscillation) that underpins the linear regression.
+  - **Algorithm Highlight**: Computes a 1st-degree polynomial linear regression (`scipy.stats.linregress`) on the LST telemetry to model the thermodynamic trajectory. Extrapolates a 95% Confidence Interval band to statistically validate that the +5°C localized heat escalation is a permanent structural consequence of algorithmic metabolism. The underlying signal is aggressively smoothed via a Savitzky-Golay polynomial convolution filter, accurately tracing the Earth's annual orbital solar cycle resulting in a sound sinusoidal wave (夏至/冬至 oscillation). The script dynamically maps a $\pm 1 \sigma$ Spatial Variance constraint across the signal, visually enforcing mathematical robustness against geographical noise critiques.
 
 ### Inter-Pipeline Automation (`run_pipeline.sh`)
 While the Google Earth Engine scripts (`04`, `06`) must be executed natively in the GEE cloud to leverage Google's server-side computation (downloading terabytes of raw satellite imagery locally is computationally unfeasible), the entire local analytical workflow is fully automated.
@@ -71,8 +71,8 @@ The execution of this pipeline yielded the following statistically verified metr
 
 - **Logistical Sprawl:** A total land conversion of 13.21 hectares (132,123.11 SQM) of the Green Belt into impermeable asphalt parking surfaces (distinct from the 16.4 ha of building floorspace reported in the EIA).
 - **Energy Parasitism:** The identification of 17 new high-capacity grid nodes for virtual rendering and HVAC maintenance.
-- **Biophysical Erasure (NDVI):** A permanent structural collapse from a baseline NDVI of ~0.635 to ~0.28 (Mann-Kendall p < 0.001, statistically significant at 99.9% confidence). The adjacent Control Zone remained stable.
-- **Thermodynamic Escalation (LST):** A net structural increase in Land Surface Temperature of +5°C natively attributed to algorithmic metabolism and asphalt heat retention, visually validated by the 3-year UHI anomaly composite.
+- **Biophysical Erasure (NDVI):** A permanent structural collapse from a baseline NDVI of ~0.635 to ~0.28, isolated via **DiD**. The devastation trend is definitively verified by **Seasonal Mann-Kendall** testing (p < 0.001, statistically significant at 99.9% confidence). The adjacent Control Zone greenbelt remained completely stable over the 8-year continuum.
+- **Thermodynamic Escalation (LST):** A net scalar increase in Land Surface Temperature of +5°C natively attributed to algorithmic computer rendering and asphalt heat retention, visually validated by the 3-year UHI anomaly composite and rigorously bounded by Pixel-Level UQ error bars.
 
 ## 4. Repository Structure
 
