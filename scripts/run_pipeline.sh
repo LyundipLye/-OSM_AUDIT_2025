@@ -34,13 +34,28 @@ echo "[Step 3/3] NDVI Trend Chart..."
 $PYTHON "$SCRIPT_DIR/05_plot_ndvi_chart.py"
 
 echo ""
+echo "[Step 4/5] LST Thermal Chart..."
+if [ -f "$PROJECT_ROOT/data/raw_telemetry/ee-chart_lst.csv" ]; then
+    $PYTHON "$SCRIPT_DIR/07_plot_thermal_chart.py"
+else
+    echo "  -> Skip: 'data/raw_telemetry/ee-chart_lst.csv' not found. Run GEE script 06 first."
+fi
+
+echo ""
+echo "[Step 5/5] LST Sensitivity Chart (Option A)..."
+if [ -f "$PROJECT_ROOT/data/raw_telemetry/ee-chart_lst_sensitivity.csv" ]; then
+    $PYTHON "$SCRIPT_DIR/07b_plot_thermal_sensitivity.py"
+else
+    echo "  -> Skip: 'data/raw_telemetry/ee-chart_lst_sensitivity.csv' not found. Run GEE script 06b first."
+fi
+
+echo ""
 echo "=================================================="
 echo "Pipeline complete."
 echo "=================================================="
 echo ""
-echo "Manual steps remaining:"
-echo "  1. Run 04_gee_ndvi_pipeline.js in GEE Code Editor"
-echo "     -> Save downloaded CSV as: data/raw_telemetry/ee-chart_ndvi.csv"
-echo "  2. Run 06_gee_thermal_pipeline.js in GEE Code Editor"
-echo "     -> Save downloaded CSV as: data/raw_telemetry/ee-chart_lst.csv"
-echo "  3. Re-run this pipeline script or execute 07_plot_thermal_chart.py directly"
+echo "Manual steps remaining in GEE Code Editor:"
+echo "  1. Run 04_gee_ndvi_pipeline.js -> Save to: data/raw_telemetry/ee-chart_ndvi.csv"
+echo "  2. Run 06_gee_thermal_pipeline.js -> Save to: data/raw_telemetry/ee-chart_lst.csv"
+echo "  3. Run 06b_gee_thermal_sensitivity.js -> Save to: data/raw_telemetry/ee-chart_lst_sensitivity.csv"
+echo "  Then re-run this script to generate all charts."
