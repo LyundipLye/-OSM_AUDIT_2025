@@ -30,13 +30,12 @@ var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).bu
 // ==============================================================================
 var modisET = ee.ImageCollection('MODIS/061/MOD16A2GF')
   .filterDate(START_DATE, END_DATE)
-  .select('ET_500m');
+  .select('ET');
 
 // scale factor 0.1 -> kg/m^2/8day (or mm/8day)
 function prepET(image) {
-  var et = image.multiply(0.1).rename('ET_mm_8day');
-  return image.addBands(et).select('ET_mm_8day')
-    .copyProperties(image, ['system:time_start']);
+  var et = image.select('ET').multiply(0.1).rename('ET_mm_8day');
+  return et.copyProperties(image, ['system:time_start']);
 }
 
 var etCollection = modisET.map(prepET);
