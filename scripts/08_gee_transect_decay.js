@@ -88,7 +88,7 @@ var ringsList = distances.map(function(d) {
   
   // 对于 0-50m 这层环，我们标注其代表距离为25m
   return ee.Feature(ring, {
-    'Distance_m': dNum.add(stepSize.divide(2))
+    'Distance_m': dNum.add(stepSize / 2)
   });
 });
 
