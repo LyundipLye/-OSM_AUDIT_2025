@@ -34,7 +34,7 @@ echo "[Step 3/3] NDVI Trend Chart..."
 $PYTHON "$SCRIPT_DIR/05_plot_ndvi_chart.py"
 
 echo ""
-echo "[Step 4/5] LST Thermal Chart..."
+echo "[Step 4/7] LST Thermal Chart..."
 if [ -f "$PROJECT_ROOT/data/raw_telemetry/ee-chart_lst.csv" ]; then
     $PYTHON "$SCRIPT_DIR/07_plot_thermal_chart.py"
 else
@@ -42,11 +42,27 @@ else
 fi
 
 echo ""
-echo "[Step 5/5] LST Sensitivity Chart (Option A)..."
+echo "[Step 5/7] LST Sensitivity Chart (Option A)..."
 if [ -f "$PROJECT_ROOT/data/raw_telemetry/ee-chart_lst_sensitivity.csv" ]; then
     $PYTHON "$SCRIPT_DIR/07b_plot_thermal_sensitivity.py"
 else
     echo "  -> Skip: 'data/raw_telemetry/ee-chart_lst_sensitivity.csv' not found. Run GEE script 06b first."
+fi
+
+echo ""
+echo "[Step 6/7] Spatial Transect Decay Chart..."
+if [ -f "$PROJECT_ROOT/data/raw_telemetry/ee-chart_decay.csv" ]; then
+    $PYTHON "$SCRIPT_DIR/09_plot_transect_decay.py"
+else
+    echo "  -> Skip: 'data/raw_telemetry/ee-chart_decay.csv' not found. Run GEE script 08 first."
+fi
+
+echo ""
+echo "[Step 7/7] Evapotranspiration Collapse Chart..."
+if [ -f "$PROJECT_ROOT/data/raw_telemetry/ee-chart_et.csv" ]; then
+    $PYTHON "$SCRIPT_DIR/11_plot_evapotranspiration.py"
+else
+    echo "  -> Skip: 'data/raw_telemetry/ee-chart_et.csv' not found. Run GEE script 10 first."
 fi
 
 echo ""
@@ -55,7 +71,9 @@ echo "Pipeline complete."
 echo "=================================================="
 echo ""
 echo "Manual steps remaining in GEE Code Editor:"
-echo "  1. Run 04_gee_ndvi_pipeline.js -> Save to: data/raw_telemetry/ee-chart_ndvi.csv"
-echo "  2. Run 06_gee_thermal_pipeline.js -> Save to: data/raw_telemetry/ee-chart_lst.csv"
-echo "  3. Run 06b_gee_thermal_sensitivity.js -> Save to: data/raw_telemetry/ee-chart_lst_sensitivity.csv"
+echo "  1. Run 04_gee_ndvi_pipeline.js          -> Save to: data/raw_telemetry/ee-chart_ndvi.csv"
+echo "  2. Run 06_gee_thermal_pipeline.js       -> Save to: data/raw_telemetry/ee-chart_lst.csv"
+echo "  3. Run 06b_gee_thermal_sensitivity.js   -> Save to: data/raw_telemetry/ee-chart_lst_sensitivity.csv"
+echo "  4. Run 08_gee_transect_decay.js         -> Save to: data/raw_telemetry/ee-chart_decay.csv"
+echo "  5. Run 10_gee_evapotranspiration.js     -> Save to: data/raw_telemetry/ee-chart_et.csv"
 echo "  Then re-run this script to generate all charts."
