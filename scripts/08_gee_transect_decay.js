@@ -82,7 +82,7 @@ var coreFeature = ee.Feature(sprawlZone, {
 // 生成外部环形缓冲区
 var ringsList = distances.map(function(d) {
   var dNum = ee.Number(d);
-  var inner = sprawlZone.buffer(dNum);
+  var inner = sprawlZone.buffer(dNum.max(0.1));
   var outer = sprawlZone.buffer(dNum.add(stepSize));
   var ring = outer.difference(inner); // 切出面包圈形状
   
