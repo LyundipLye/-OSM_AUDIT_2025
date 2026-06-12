@@ -8,7 +8,7 @@
 var START_DATE = '2015-01-01';
 var END_DATE   = '2026-03-15';
 
-// 1. Impact Zone — 精确的停车场多边形 (The "Point Source" of heat)
+// 1. Impact Zone — precise parking lot polygon (the "point source" of heat)
 var sprawlZone = ee.Geometry.Polygon([[
   [-0.4676848515978538,51.40882742185046],
   [-0.4669123754015647,51.409429716784295],
@@ -17,16 +17,16 @@ var sprawlZone = ee.Geometry.Polygon([[
   [-0.4676848515978538,51.40882742185046]
 ]]);
 
-var maxDistance = 800; // 设定最远分析距离 (meters)
-var stepSize = 50;     // 每圈 50 米带宽
+var maxDistance = 800; // Maximum analysis distance (meters)
+var stepSize = 50;     // Ring bandwidth: 50 metres per annulus
 
 var macroRegion = sprawlZone.buffer(maxDistance + 200);
 
-// 包围整个研究区域的矩形，用于影像裁剪过滤
+// Bounding rectangle for image filtering
 var combinedBounds = ee.Geometry.Rectangle([-0.49, 51.39, -0.45, 51.43]);
 
 // ==============================================================================
-// 影像融合：Landsat 7 + 8 + 9 (无 NDBI 掩膜，保留真实辐射)
+// Image fusion: Landsat 7 + 8 + 9 (no NDBI masking, preserves true radiance)
 // ==============================================================================
 function prepL7(image) {
   var qa = image.select('QA_PIXEL');
@@ -51,7 +51,7 @@ var lstCollection = landsat7.map(prepL7)
   .select(['LST_Celsius']);
 
 // ==============================================================================
-// 提取 夏季 (JJA) 复合均值 (消除单日气候异常)
+// Extract summer (JJA) composite mean (eliminates single-day weather anomalies)
 // ==============================================================================
 var summerPre = lstCollection
   .filter(ee.Filter.calendarRange(6, 8, 'month'))
@@ -63,46 +63,46 @@ var summerPost = lstCollection
   .filterDate('2023-01-01', '2026-01-01')
   .mean();
 
-// 计算复合图像，合并为一个 Image 以便提取
+// Combine into a single Image for extraction
 var lstComposite = ee.Image([
   summerPre.rename('Pre_LST_mean'),
   summerPost.rename('Post_LST_mean')
 ]);
 
 // ==============================================================================
-// 构建同心圆环 (Concentric Buffers)
+// Build concentric annular buffers
 // ==============================================================================
 var distances = ee.List.sequence(0, maxDistance - stepSize, stepSize);
 
-// Distance 0 = 核心区本身 (Impact Zone)
+// Distance 0 = the Impact Zone itself (core)
 var coreFeature = ee.Feature(sprawlZone, {
   'Distance_m': 0,
 });
 
-// 生成外部环形缓冲区
+// Generate outer annular buffer rings
 var ringsList = distances.map(function(d) {
   var dNum = ee.Number(d);
   var inner = sprawlZone.buffer(dNum.max(0.1));
   var outer = sprawlZone.buffer(dNum.add(stepSize));
-  var ring = outer.difference(inner); // 切出面包圈形状
+  var ring = outer.difference(inner); // Cut out the donut shape
   
-  // 对于 0-50m 这层环，我们标注其代表距离为25m
+  // For the 0-50m ring, label its representative distance as 25m
   return ee.Feature(ring, {
     'Distance_m': dNum.add(stepSize / 2)
   });
 });
 
-// 合并核心区与环形区
+// Merge core and annular zones
 var transectZones = ee.FeatureCollection(ee.List([coreFeature]).cat(ringsList));
 
 // ==============================================================================
-// 提取每个圆环的平均 LST
+// Extract mean LST per annular ring
 // ==============================================================================
 var extractDecay = function(feature) {
   var stats = lstComposite.reduceRegion({
     reducer: ee.Reducer.mean(),
     geometry: feature.geometry(),
-    scale: 30,  // 使用 30m 提取，GEE 会自动用最近邻或双线性重采样 100m 原生 LST
+    scale: 30,  // 30m extraction; GEE auto-resamples from 100m native LST
     bestEffort: true
   });
   
@@ -115,7 +115,7 @@ var extractDecay = function(feature) {
 var decayData = transectZones.map(extractDecay);
 
 // ==============================================================================
-// 绘制 UI 图表并输出
+// Chart output
 // ==============================================================================
 var decayChart = ui.Chart.feature.byFeature({
   features: decayData,
@@ -132,19 +132,19 @@ var decayChart = ui.Chart.feature.byFeature({
   colors: ['#33CC33', '#FF4500'] // Pre = Green, Post = Red
 });
 
-print("【ACTION REQUIRED】");
+print("[ACTION REQUIRED]");
 print("1. Summer composite (JJA) spatial advection decay curve.");
 print("2. Click the pop-out arrow -> Download CSV.");
 print("3. MUST Save as: data/raw_telemetry/ee-chart_decay.csv");
 print(decayChart);
 
 // ==============================================================================
-// 可视化渲染 (用于截屏放PPT)
+// Map visualisation (for screenshots / presentations)
 // ==============================================================================
 Map.centerObject(sprawlZone, 15);
 Map.setOptions('SATELLITE');
 
-// 将环形区域用空心白线画出以示示意图
+// Draw transect ring outlines in white
 var empty = ee.Image().byte();
 var outline = empty.paint({
   featureCollection: transectZones,
@@ -154,7 +154,7 @@ var outline = empty.paint({
 Map.addLayer(outline, {palette: ['FFFFFF']}, 'Transect Rings');
 
 var anomalyVis = {
-  min: 25, max: 35, // 绝对温度范围
+  min: 25, max: 35, // Absolute temperature range
   palette: ['#313695','#4575b4','#74add1','#abd9e9','#e0f3f8','#ffffbf','#fee090','#fdae61','#f46d43','#d73027','#a50026']
 };
 Map.addLayer(summerPre.clip(macroRegion), anomalyVis, 'Summer Pre (2016-2018)', false);

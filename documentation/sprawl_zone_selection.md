@@ -1,45 +1,44 @@
-# Sprawl Zone 选点说明与面积口径说明
+# Impact Zone and Control Zone Selection
 
-## Sprawl Zone 坐标选定依据
+## Impact Zone Coordinates
 
-**坐标**: `[-0.469366, 51.410315]`
+**Coordinates**: `[-0.469366, 51.410315]`
 
-该坐标对应 Shepperton Studios 扩建区域南侧的新建大型停车场群（EIA 规划文案中对应 Zone C），位于 Studios Road 以南、Shepperton Studios 主厂区西南方向。
+This coordinate corresponds to the newly-constructed parking lot complex south of the Shepperton Studios expansion area (Zone C in the EIA planning documents), located south of Studios Road and southwest of the main studio complex.
 
-选定理由：
-1. 该区域在 2018 年前为绿地/农田，2020-2023 年间被转换为不透水沥青面积
-2. 与 EIA 规划文件 (18/01212/OUT) 中标注的新增 parking capacity (2,595 spaces) 直接对应
-3. Sentinel-2 和 Landsat 8 影像目视确认该区域经历了最显著的土地覆盖变化
+Selection rationale:
+1. This area was greenfield/agricultural land before 2018, converted to impervious asphalt surface during 2020–2023
+2. Directly corresponds to the new parking capacity (2,595 spaces) documented in the EIA (18/01212/OUT)
+3. Sentinel-2 and Landsat imagery visually confirms this area experienced the most significant land-cover change
 
-## 敏感性分析
+## Sensitivity Check
 
-审计结果不依赖于单一坐标的选取，在 sprawl zone 周围 4 个方位各偏移约 100-200m 取样：
+Audit results are not dependent on the selection of a single coordinate. Four offset sampling points (~100–200m in each cardinal direction) are used:
 
-| 点位 | 坐标 | 用途 |
-|------|------|------|
-| Sprawl_Core | [-0.469366, 51.410315] | 主审计点 |
-| Sprawl_North | [-0.469366, 51.411500] | 北偏 ~130m |
-| Sprawl_South | [-0.469366, 51.409100] | 南偏 ~130m |
-| Sprawl_East | [-0.467000, 51.410315] | 东偏 ~160m |
-| Control | [-0.4105, 51.4074] | 对照区（附近未开发绿地） |
+| Point | Coordinates | Purpose |
+|-------|-------------|---------|
+| Impact_Core | [-0.469366, 51.410315] | Primary audit point |
+| Impact_North | [-0.469366, 51.411500] | ~130m north offset |
+| Impact_South | [-0.469366, 51.409100] | ~130m south offset |
+| Impact_East | [-0.467000, 51.410315] | ~160m east offset |
+| Control | [-0.4105, 51.4074] | Control zone (stable greenbelt) |
 
-## 对照区选定依据
+## Control Zone Selection
 
-**坐标**: `[-0.4105, 51.4074]`
+**Coordinates**: `[-0.4105, 51.4074]`
 
-- 位于 Shepperton 东北方向约 3km，Thames 河北岸的稳定绿地
-- 无大型开发项目记录
-- 纬度/海拔与 sprawl zone 相近，排除地形干扰
-- 同在 Sentinel-2 / Landsat 8 扫描路径内，确保传感器条件一致
+- Located ~3km northeast of Shepperton, north bank of the Thames, on stable greenbelt
+- No major development projects recorded in the observation period
+- Similar latitude/elevation to the Impact Zone, reducing topographic confounders
+- Within the same Sentinel-2 / Landsat swath path, ensuring consistent sensor conditions
 
-## 面积口径说明
+## Area Metric Clarification
 
-本项目 `02_spatial_projection.py` 输出的 **13.2 ha** 仅统计 OSM 中标记为 `amenity=parking` 的多边形投影面积，**不等于** EIA 规划文件中的总开发面积。
+| Metric | Value | Source |
+|--------|-------|--------|
+| Parking polygon area | 13.2 ha | OSM spatial audit (`02_spatial_projection.py`) |
+| New building floorspace | 16.4 ha (164,000 sqm) | EIA 18/01212/OUT |
+| Total greenbelt loss | 39 ha | Spelthorne Borough Council |
+| Deduplicated impervious surface (all categories) | 16.91 ha | OSM spatial audit (Shepperton + Longcross combined) |
 
-| 指标 | 数值 | 来源 |
-|------|------|------|
-| 停车场面积 (parking polygons) | 13.2 ha | OSM 空间审计 |
-| 新增建筑面积 (floorspace) | 16.4 ha (164,000 sqm) | EIA 18/01212/OUT |
-| 绿带总损失 (Metropolitan Green Belt) | 39 ha | Spelthorne Borough Council |
-
-停车场面积是 logistical sprawl 的指标（不透水面积扩张），不应与总开发面积混淆。
+The parking polygon area is a measure of logistical impervious surface coverage and should not be conflated with total development floorspace or total greenbelt loss.

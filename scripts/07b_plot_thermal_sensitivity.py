@@ -1,34 +1,51 @@
-# -*- coding: utf-8 -*-
 """
 07b_plot_thermal_sensitivity.py
-Sensitivity Analysis (Option A): VP Full Polygon + Warm Season (Apr-Sep)
-三面板：STL趋势 + 全年BACI + 暖季专项BACI
+SENSITIVITY Check: Parking-Lot Sub-Polygon (~3 thermal pixels)
+Tests whether the thermal signal localises to the development core.
+Expected: low statistical power due to pixel count limitation.
+
+INPUT FILE NOTE: this SENSITIVITY check reads `ee-chart_lst.csv`, which holds the
+PARKING-LOT extraction (~3 thermal pixels). The PRIMARY full-polygon analysis
+(script 07) reads `ee-chart_lst_sensitivity.csv`. The CSV filenames are
+counter-intuitive relative to their roles; see the "LST input-file map" table in
+README §2 Phase II.B. Do not swap the inputs.
 """
 
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+import os
 import warnings
 from scipy.stats import ttest_ind, mannwhitneyu
-from statsmodels.tsa.seasonal import STL
+import statsmodels.api as sm
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib.figure")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONSTRUCTION_DATE = pd.Timestamp('2021-06-01')
 
-CONSTRUCTION_DATE = pd.Timestamp('2019-06-01')
+def get_robust_ci(series):
+    if len(series) < 2: return series.mean(), 0, 0
+    mean = series.mean()
+    se = series.std() / np.sqrt(len(series))
+    ci_half = 1.96 * se
+    return mean, mean - ci_half, mean + ci_half
 
-
-def _sig_label(p):
-    if p < 0.01:
-        return 'Highly Significant'
-    elif p < 0.05:
-        return 'Significant'
-    elif p < 0.10:
-        return 'Marginal'
-    return 'Not Significant'
-
+def run_hac_regression(delta_series, construction_date, label=""):
+    """Run Mean-Shift OLS with Newey-West HAC standard errors."""
+    post_dummy = (delta_series.index >= construction_date).astype(int)
+    X = sm.add_constant(post_dummy)
+    model = sm.OLS(delta_series.values, X)
+    n_obs = len(delta_series)
+    maxlags = int(np.ceil(n_obs ** (1/3)))
+    results = model.fit(cov_type='HAC', cov_kwds={'maxlags': maxlags})
+    
+    coef = results.params[1]
+    p = results.pvalues[1]
+    ci_low, ci_high = results.conf_int()[1]
+    
+    print(f"  HAC OLS (maxlags={maxlags}): shift={coef:+.3f}°C | p={p:.4f} | 95% CI [{ci_low:.3f}, {ci_high:.3f}]")
+    return coef, p, ci_low, ci_high
 
 def render_thermodynamic_chart(csv_path, output_image_path):
     try:
@@ -45,164 +62,100 @@ def render_thermodynamic_chart(csv_path, output_image_path):
 
     df['system:time_start'] = pd.to_datetime(df['system:time_start'])
     df = df.sort_values('system:time_start').set_index('system:time_start')
+    df = df[~df.index.duplicated(keep='first')]
 
     df_valid = df[['Sprawl_Zone_Core_mean', 'Control_Zone_mean']].dropna()
     df_valid['delta'] = df_valid['Sprawl_Zone_Core_mean'] - df_valid['Control_Zone_mean']
 
-    print(f"Total valid observations: {len(df_valid)}")
+    print(f"Total valid observations: {len(df_valid)}\n")
 
-    # ---------------------------------------------------------
-    # 全年 BACI
-    # ---------------------------------------------------------
-    pre = df_valid.loc[:CONSTRUCTION_DATE, 'delta']
-    post = df_valid.loc[CONSTRUCTION_DATE:, 'delta']
+    # --- 1. FULL-YEAR BACI ANALYSIS ---
+    pre = df_valid.loc[df_valid.index < CONSTRUCTION_DATE, 'delta']
+    post = df_valid.loc[df_valid.index >= CONSTRUCTION_DATE, 'delta']
+    
+    pre_m, pre_low, pre_high = get_robust_ci(pre)
+    post_m, post_low, post_high = get_robust_ci(post)
+    
+    _, mw_p = mannwhitneyu(pre, post, alternative='two-sided')
 
-    t_stat, t_p = ttest_ind(pre, post, equal_var=False)
-    u_stat, u_p = mannwhitneyu(pre, post, alternative='two-sided')
+    print("=== Full-Year BACI (Parking-Lot Sub-Polygon, ~3 thermal pixels) ===")
+    print(f"Pre  (n={len(pre)}): mean ΔT = {pre_m:+.2f}°C ± {pre.std():.2f}")
+    print(f"Post (n={len(post)}): mean ΔT = {post_m:+.2f}°C ± {post.std():.2f}")
+    hac_coef, hac_p, _, _ = run_hac_regression(df_valid['delta'], CONSTRUCTION_DATE, "Full-Year")
+    print(f"  MW p={mw_p:.4f}\n")
 
-    print(f"\n=== Full-Year BACI ===")
-    print(f"Pre  (n={len(pre)}): mean ΔT = {pre.mean():+.2f}°C ± {pre.std():.2f}")
-    print(f"Post (n={len(post)}): mean ΔT = {post.mean():+.2f}°C ± {post.std():.2f}")
-    print(f"Shift: {post.mean() - pre.mean():+.2f}°C | Welch p={t_p:.4f} | MW p={u_p:.4f}")
+    # --- 2. WARM-SEASON BACI ANALYSIS (Apr-Sep) ---
+    warm_mask = df_valid.index.month.isin([4, 5, 6, 7, 8, 9])
+    df_warm = df_valid[warm_mask]
+    
+    spre = df_warm.loc[df_warm.index < CONSTRUCTION_DATE, 'delta']
+    spost = df_warm.loc[df_warm.index >= CONSTRUCTION_DATE, 'delta']
+    
+    spre_m, spre_low, spre_high = get_robust_ci(spre)
+    spost_m, spost_low, spost_high = get_robust_ci(spost)
+    
+    _, s_mw_p = mannwhitneyu(spre, spost, alternative='two-sided')
 
-    # ---------------------------------------------------------
-    # 暖季 BACI (Apr-Sep)
-    # ---------------------------------------------------------
-    summer = df_valid[df_valid.index.month.isin([4, 5, 6, 7, 8, 9])]
-    s_pre = summer.loc[:CONSTRUCTION_DATE, 'delta']
-    s_post = summer.loc[CONSTRUCTION_DATE:, 'delta']
+    print("=== Warm-Season BACI (Apr-Sep, Parking-Lot Sub-Polygon) ===")
+    print(f"Pre  (n={len(spre)}): mean ΔT = {spre_m:+.2f}°C ± {spre.std():.2f}")
+    print(f"Post (n={len(spost)}): mean ΔT = {spost_m:+.2f}°C ± {spost.std():.2f}")
+    s_hac_coef, s_hac_p, _, _ = run_hac_regression(df_warm['delta'], CONSTRUCTION_DATE, "Warm-Season")
+    print(f"  MW p={s_mw_p:.4f}")
 
-    s_t_stat, s_t_p = ttest_ind(s_pre, s_post, equal_var=False)
-    s_u_stat, s_u_p = mannwhitneyu(s_pre, s_post, alternative='two-sided')
-
-    print(f"\n=== Warm-Season BACI (Apr-Sep) ===")
-    print(f"Pre  (n={len(s_pre)}): mean ΔT = {s_pre.mean():+.2f}°C ± {s_pre.std():.2f}")
-    print(f"Post (n={len(s_post)}): mean ΔT = {s_post.mean():+.2f}°C ± {s_post.std():.2f}")
-    print(f"Shift: {s_post.mean() - s_pre.mean():+.2f}°C | Welch p={s_t_p:.4f} | MW p={s_u_p:.4f}")
-
-    # ---------------------------------------------------------
-    # STL 分解
-    # ---------------------------------------------------------
-    df_sprawl = df[['Sprawl_Zone_Core_mean']].dropna().resample('D').mean().interpolate(method='time')
-    df_control = df[['Control_Zone_mean']].dropna().resample('D').mean().interpolate(method='time')
-    df_daily = pd.concat([df_sprawl, df_control], axis=1).dropna()
-    df_daily.columns = ['LST_Sprawl', 'LST_Control']
-
-    stl_sprawl = STL(df_daily['LST_Sprawl'], period=365, robust=True).fit()
-    stl_control = STL(df_daily['LST_Control'], period=365, robust=True).fit()
-    sprawl_trend = stl_sprawl.trend
-    control_trend = stl_control.trend
-    delta_trend = sprawl_trend - control_trend
-
-    has_std = 'Sprawl_Zone_Core_std' in df.columns
-    if has_std:
-        std_raw = df[['Sprawl_Zone_Core_std']].dropna().resample('D').mean().interpolate(method='time')
-        std_smooth = std_raw.iloc[:, 0].rolling(180, min_periods=30, center=True).mean().bfill().ffill()
-        std_smooth = std_smooth.reindex(sprawl_trend.index).bfill().ffill()
-
-    # ---------------------------------------------------------
-    # 三面板绘图
-    # ---------------------------------------------------------
+    # Plotting
     plt.style.use('dark_background')
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 14), dpi=400,
-                                         gridspec_kw={'height_ratios': [3, 2, 2]}, sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12), dpi=400, sharex=False)
 
-    # ========== 上面板：STL 趋势 ==========
-    ax1.plot(sprawl_trend.index, sprawl_trend, color='#FF8C00', linewidth=3,
-             label='Impact Zone (VP Full Polygon) — STL Trend')
-    ax1.plot(control_trend.index, control_trend, color='#33CC33', linewidth=3, linestyle='-.',
-             label='Control Zone (Park) — STL Trend')
-    if has_std:
-        ax1.fill_between(sprawl_trend.index, sprawl_trend - std_smooth, sprawl_trend + std_smooth,
-                         color='#FF8C00', alpha=0.12, label=r'Spatial Variance ($\pm 1\sigma$)', linewidth=0)
+    # --- Panel 1: Full-Year Delta ---
+    ax1.scatter(df_valid.index, df_valid['delta'], color='#FF9933', alpha=0.5, s=15, zorder=2, label=r'Raw $\Delta$T (Impact - Control)')
+    ax1.axhline(y=0, color='#666666', linestyle='-', lw=1, zorder=1)
+    
+    ax1.hlines(pre_m, xmin=df_valid.index.min(), xmax=CONSTRUCTION_DATE, color='#FFCC00', lw=3, zorder=4, label=f'Pre Mean ({pre_m:+.2f}°C)')
+    ax1.fill_between([df_valid.index.min(), CONSTRUCTION_DATE], pre_low, pre_high, color='#FFCC00', alpha=0.3, zorder=3, label='95% CI (SEM)')
+    
+    ax1.hlines(post_m, xmin=CONSTRUCTION_DATE, xmax=df_valid.index.max(), color='#FF4444', lw=3, zorder=4, label=f'Post Mean ({post_m:+.2f}°C)')
+    ax1.fill_between([CONSTRUCTION_DATE, df_valid.index.max()], post_low, post_high, color='#FF4444', alpha=0.3, zorder=3)
+    
     ax1.axvline(x=CONSTRUCTION_DATE, color='#FFFFFF', linestyle=':', linewidth=1.5, alpha=0.5)
-    ax1.text(CONSTRUCTION_DATE + pd.Timedelta(days=30), sprawl_trend.max() * 0.95,
-             'Construction', fontsize=9, fontname='Courier New', color='#AAAAAA')
-    ax1.set_ylabel('LST Trend (°C)', fontsize=12, fontname='Courier New', color='#CCCCCC')
-    ax1.set_title('Paired BACI Sensitivity Analysis: VP Full Polygon (L7+L8+L9)',
-                  fontsize=15, fontweight='bold', fontname='Courier New', color='white', pad=15)
-    ax1.legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False,
-               prop={'family': 'Courier New', 'size': 9})
-    ax1.grid(True, color='#333333', linestyle='--', linewidth=0.8, alpha=0.5)
-    ax1.tick_params(axis='both', labelsize=10, colors='#AAAAAA')
+    
+    fy_label = 'Full-Year DiD: {0:+.2f}°C \nHAC p={1:.4f} | MW p={2:.4f}'.format(hac_coef, hac_p, mw_p)
+    ax1.text(0.02, 0.08, fy_label, transform=ax1.transAxes, fontsize=12, fontfamily='Courier New', color='#FFCC00',
+             bbox=dict(facecolor='#111111', edgecolor='#FFCC00', alpha=0.8, boxstyle='round,pad=0.5'))
+    
+    ax1.set_title(r'Sensitivity: Parking-Lot Sub-Polygon $\Delta$T (~3 thermal pixels)', fontsize=15, fontweight='bold', color='white', fontfamily='Courier New')
+    ax1.set_ylabel(r'$\Delta$ LST (°C)', fontsize=12, fontfamily='Courier New', color='#CCCCCC')
+    ax1.legend(loc='upper right', prop={'family': 'Courier New', 'size': 10}, frameon=False)
+    ax1.grid(True, linestyle='--', alpha=0.2)
 
-    # ========== 中面板：全年 BACI ==========
-    ax2.scatter(pre.index, pre.values, color='#66CCFF', alpha=0.5, s=15, zorder=3,
-                label=f'Pre ΔT (n={len(pre)}, μ={pre.mean():+.2f}°C)')
-    ax2.scatter(post.index, post.values, color='#FF6666', alpha=0.5, s=15, zorder=3,
-                label=f'Post ΔT (n={len(post)}, μ={post.mean():+.2f}°C)')
-    ax2.plot(delta_trend.index, delta_trend, color='#FFAA00', linewidth=1.5, alpha=0.6)
-    ax2.axhline(y=0, color='#666666', linestyle='-', linewidth=1, alpha=0.4)
-    ax2.hlines(y=pre.mean(), xmin=pre.index.min(), xmax=CONSTRUCTION_DATE,
-               color='#66CCFF', linewidth=2.5, linestyle='--')
-    ax2.hlines(y=post.mean(), xmin=CONSTRUCTION_DATE, xmax=post.index.max(),
-               color='#FF6666', linewidth=2.5, linestyle='--')
+    # --- Panel 2: Warm-Season Delta ---
+    ax2.scatter(df_warm.index, df_warm['delta'], color='#FF3333', alpha=0.7, s=25, zorder=2, label=r'Warm-Season Raw $\Delta$T')
+    ax2.axhline(y=0, color='#666666', linestyle='-', lw=1, zorder=1)
+    
+    ax2.hlines(spre_m, xmin=df_warm.index.min(), xmax=CONSTRUCTION_DATE, color='#00CC66', lw=3, zorder=4, label=f'Warm Pre Mean ({spre_m:+.2f}°C)')
+    ax2.fill_between([df_warm.index.min(), CONSTRUCTION_DATE], spre_low, spre_high, color='#00CC66', alpha=0.3, zorder=3, label='95% CI (SEM)')
+    
+    ax2.hlines(spost_m, xmin=CONSTRUCTION_DATE, xmax=df_warm.index.max(), color='#FF3333', lw=3, zorder=4, label=f'Warm Post Mean ({spost_m:+.2f}°C)')
+    ax2.fill_between([CONSTRUCTION_DATE, df_warm.index.max()], spost_low, spost_high, color='#FF3333', alpha=0.3, zorder=3)
+    
     ax2.axvline(x=CONSTRUCTION_DATE, color='#FFFFFF', linestyle=':', linewidth=1.5, alpha=0.5)
-    ax2.axvspan(df_valid.index.min(), CONSTRUCTION_DATE, alpha=0.04, color='#66CCFF')
-    ax2.axvspan(CONSTRUCTION_DATE, df_valid.index.max(), alpha=0.04, color='#FF6666')
+    
+    sj_label = 'Warm-Season DiD: {0:+.2f}°C \nHAC p={1:.4f}'.format(s_hac_coef, s_hac_p)
+    ax2.text(0.02, 0.08, sj_label, transform=ax2.transAxes, fontsize=12, fontfamily='Courier New', color='#00FF88',
+             bbox=dict(facecolor='#111111', edgecolor='#00FF88', alpha=0.8, boxstyle='round,pad=0.5'))
+             
+    ax2.set_title(r'Sensitivity: Warm Season (Apr$-$Sep) Parking-Lot Sub-Polygon', fontsize=14, fontweight='bold', color='white', fontfamily='Courier New')
+    ax2.set_ylabel(r'Warm $\Delta$ LST (°C)', fontsize=12, fontfamily='Courier New', color='#CCCCCC')
+    ax2.legend(loc='upper right', prop={'family': 'Courier New', 'size': 10}, frameon=False)
+    ax2.grid(True, linestyle='--', alpha=0.2)
 
-    fy_label = (f"Full-Year BACI: Welch p={t_p:.3e} ({_sig_label(t_p)}), "
-                f"MW p={u_p:.3e} ({_sig_label(u_p)})")
-    ax2.text(0.02, 0.06, fy_label, transform=ax2.transAxes, fontsize=9,
-             fontfamily='Courier New', color='#FFCC00',
-             bbox=dict(boxstyle='round,pad=0.4', facecolor='#111111', edgecolor='#FFCC00', alpha=0.8))
-    ax2.set_ylabel(r'$\Delta$T Full-Year (°C)', fontsize=12, fontname='Courier New', color='#FF8888')
-    ax2.legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False,
-               prop={'family': 'Courier New', 'size': 9})
-    ax2.grid(True, color='#333333', linestyle='--', linewidth=0.8, alpha=0.5)
-    ax2.tick_params(axis='both', labelsize=10, colors='#AAAAAA')
-
-    # ========== 下面板：暖季 BACI (Apr-Sep) ==========
-    ax3.scatter(s_pre.index, s_pre.values, color='#66CCFF', alpha=0.7, s=40, marker='D', zorder=3,
-                edgecolors='white', linewidth=0.5,
-                label=f'Pre Warm-Season ΔT (n={len(s_pre)}, μ={s_pre.mean():+.2f}°C)')
-    ax3.scatter(s_post.index, s_post.values, color='#FF4444', alpha=0.7, s=40, marker='D', zorder=3,
-                edgecolors='white', linewidth=0.5,
-                label=f'Post Warm-Season ΔT (n={len(s_post)}, μ={s_post.mean():+.2f}°C)')
-    ax3.axhline(y=0, color='#666666', linestyle='-', linewidth=1, alpha=0.4)
-    ax3.hlines(y=s_pre.mean(), xmin=s_pre.index.min(), xmax=CONSTRUCTION_DATE,
-               color='#66CCFF', linewidth=2.5, linestyle='--')
-    ax3.hlines(y=s_post.mean(), xmin=CONSTRUCTION_DATE, xmax=s_post.index.max(),
-               color='#FF4444', linewidth=2.5, linestyle='--')
-    ax3.axvline(x=CONSTRUCTION_DATE, color='#FFFFFF', linestyle=':', linewidth=1.5, alpha=0.5)
-    ax3.axvspan(df_valid.index.min(), CONSTRUCTION_DATE, alpha=0.04, color='#66CCFF')
-    ax3.axvspan(CONSTRUCTION_DATE, df_valid.index.max(), alpha=0.04, color='#FF6666')
-
-    # 箭头标注 regime shift
-    shift = s_post.mean() - s_pre.mean()
-    mid_x = CONSTRUCTION_DATE + pd.Timedelta(days=365*2)
-    ax3.annotate(f'UHI Shift: {shift:+.2f}°C',
-                 xy=(mid_x, s_post.mean()), xytext=(mid_x, s_post.mean() + 2),
-                 fontsize=11, fontweight='bold', color='#FF4444', fontfamily='Courier New',
-                 arrowprops=dict(arrowstyle='->', color='#FF4444', lw=2),
-                 ha='center')
-
-    sj_label = (f"Warm-Season BACI (Apr-Sep): Welch p={s_t_p:.3e} ({_sig_label(s_t_p)}), "
-                f"MW p={s_u_p:.3e} ({_sig_label(s_u_p)})")
-    ax3.text(0.02, 0.06, sj_label, transform=ax3.transAxes, fontsize=9,
-             fontfamily='Courier New', color='#00FF88',
-             bbox=dict(boxstyle='round,pad=0.4', facecolor='#111111', edgecolor='#00FF88', alpha=0.8))
-    ax3.set_ylabel(r'$\Delta$T Warm Season (°C)', fontsize=12, fontname='Courier New', color='#FF8888')
-    ax3.set_xlabel('Temporal Axis (Years)', fontsize=12, fontname='Courier New', color='#CCCCCC')
-    ax3.legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False,
-               prop={'family': 'Courier New', 'size': 9})
-    ax3.grid(True, color='#333333', linestyle='--', linewidth=0.8, alpha=0.5)
-    ax3.tick_params(axis='both', labelsize=10, colors='#AAAAAA')
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    ax3.xaxis.set_major_locator(mdates.YearLocator())
-
-    fig.text(0.98, 0.005,
-             'Data: USGS Landsat 7+8+9 (TIRS) | Paired BACI — No NDBI Mask | STL-LOESS | Author: H. Li',
-             fontsize=8, color='#888888', ha='right', va='bottom', fontfamily='Helvetica')
-
-    plt.tight_layout()
+    fig.text(0.98, 0.02, 'Data: Landsat 7+8+9 | Method: Mean-Shift OLS + Newey-West HAC | Author: H. Li', 
+             fontsize=9, color='#AAaaaa', ha='right', va='bottom', fontfamily='Helvetica')
+             
+    plt.tight_layout(pad=3.0)
     plt.savefig(output_image_path, dpi=300, bbox_inches='tight', facecolor='#111111')
     print(f"\nSAVED: {output_image_path}")
-    if os.environ.get('MPLBACKEND') != 'Agg':
-        plt.show(block=False)
 
-
-if __name__ == "__main__":
-    input_csv = os.path.join(PROJECT_ROOT, 'data', 'raw_telemetry', 'ee-chart_lst_sensitivity.csv')
+if __name__ == '__main__':
+    input_csv = os.path.join(PROJECT_ROOT, 'data', 'raw_telemetry', 'ee-chart_lst.csv')
     output_png = os.path.join(PROJECT_ROOT, 'visualisations', 'thermodynamic_scar_sensitivity_chart.png')
     render_thermodynamic_chart(input_csv, output_png)

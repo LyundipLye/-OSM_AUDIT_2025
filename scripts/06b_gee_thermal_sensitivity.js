@@ -1,16 +1,16 @@
 // ==============================================================================
 // OSM_AUDIT_2025: THERMODYNAMIC SPATIAL AUDIT - SENSITIVITY ANALYSIS (Option A)
 // Landsat 7 ETM+ (60m) + Landsat 8 C2 (100m) + Landsat 9 C2 (100m)
-// 无 NDBI 掩膜 — 使用 VP 完整开发区多边形 (大幅降低单次观测的空间方差)
+// No NDBI masking — uses full VP development polygon (greatly reduces per-observation spatial variance)
 // ==============================================================================
 
 // ⚠️ Update END_DATE before each run
 var START_DATE = '2015-01-01';
 var END_DATE   = '2026-03-15';  // <-- UPDATE ME
 
-// 1. Impact Zone — VP Studio 完整开发多边形（9 顶点）
-// 本 Sensitivity Analysis 牺牲了一定的因果纯度（混入了原有的建筑绿地），
-// 但将影响区扩大到 ~1km²，覆盖 ~50个 native LST pixels，大幅提高统计功效
+// 1. Impact Zone — full VP studio development polygon (9 vertices)
+// This sensitivity analysis trades some causal purity (mixing in existing buildings/greenspace)
+// for a much larger spatial footprint (~1 km², ~50 native LST pixels), greatly increasing statistical power
 var sprawlZone = ee.Geometry.Polygon([[
   [-0.4758927487043363, 51.41217153384681],
   [-0.47417613493480504, 51.409200313379166],
@@ -24,14 +24,14 @@ var sprawlZone = ee.Geometry.Polygon([[
 ]]);
 var macroRegion = sprawlZone.buffer(1500);
 
-// 2. 对照区（与 NDVI 管线完全一致的坐标）
+// 2. Control Zone (identical coordinates to NDVI pipeline)
 var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(150);
 
-// 包围两个区域的矩形
+// Bounding rectangle encompassing both zones
 var combinedBounds = ee.Geometry.Rectangle([-0.48, 51.40, -0.40, 51.42]);
 
 // ==============================================================================
-// Landsat 7 ETM+ (60m 热红外，2003+ 有 SLC-off 但 reduceRegion 自动忽略条带)
+// Landsat 7 ETM+ (60m thermal, 2003+ has SLC-off but reduceRegion handles gaps)
 // ==============================================================================
 var landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')
   .filterBounds(combinedBounds)
@@ -58,7 +58,7 @@ function prepL7(image) {
 }
 
 // ==============================================================================
-// Landsat 8 OLI/TIRS (100m 热红外)
+// Landsat 8 OLI/TIRS (100m thermal infrared)
 // ==============================================================================
 var landsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterBounds(combinedBounds)
@@ -85,7 +85,7 @@ function prepL8(image) {
 }
 
 // ==============================================================================
-// Landsat 9 OLI-2/TIRS-2 (100m 热红外，2022+)
+// Landsat 9 OLI-2/TIRS-2 (100m thermal infrared, 2022+)
 // ==============================================================================
 var landsat9 = ee.ImageCollection('LANDSAT/LC09/C02/T1_L2')
   .filterBounds(combinedBounds)
@@ -112,7 +112,7 @@ function prepL9(image) {
 }
 
 // ==============================================================================
-// 三星融合 (Triple-Satellite Merge)
+// Triple-Satellite Merge
 // ==============================================================================
 var lstCollection = landsat7.map(prepL7)
   .merge(landsat8.map(prepL8))
@@ -123,7 +123,7 @@ var lstCollection = landsat7.map(prepL7)
 print('Total scenes (L7+L8+L9):', lstCollection.size());
 
 // ==============================================================================
-// 时序提取 — Paired BACI：无 NDBI 掩膜，直接测量全像素温度
+// Time series extraction — Paired BACI: no NDBI masking, direct full-pixel temperature
 // ==============================================================================
 var roiCollection = ee.FeatureCollection([
   ee.Feature(sprawlZone, {label: 'Sprawl_Zone_Core'}),
@@ -131,8 +131,8 @@ var roiCollection = ee.FeatureCollection([
 ]);
 
 var extractStats = function(image) {
-  // Paired BACI：不加任何 NDBI 掩膜，直接测量同一块地的全像素温度
-  // 施工前 = 绿地温度，施工后 = 沥青温度，前后差异即为因果效应
+  // Paired BACI: no NDBI masking, direct full-pixel temperature measurement
+  // Pre-construction = greenfield temperature, post = asphalt, difference = causal effect
   var lst = image.select('LST_Celsius');
   
   var spMean = lst.reduceRegion({
@@ -168,21 +168,21 @@ var consolidatedChart = ui.Chart.feature.byFeature({
 })
 .setChartType('ScatterChart')
 .setOptions({
-  title: 'LST Analytics: Triple-Satellite (L7+L8+L9) + NDBI Impervious Mask',
+  title: 'LST Sensitivity: Triple-Satellite (L7+L8+L9) Expanded Polygon',
   vAxis: {title: 'LST Celsius'},
   pointSize: 3,
   dataOpacity: 0.6
 });
 
-print("【ACTION REQUIRED】");
-print("1. Triple-satellite fusion (L7+L8+L9) with NDBI impervious surface mask.");
-print("2. Sprawl Zone: ONLY impervious pixels (NDBI > 0). Control Zone: full greenland.");
+print("[ACTION REQUIRED]");
+print("1. Triple-satellite fusion (L7+L8+L9), expanded VP polygon (sensitivity check).");
+print("2. Sprawl Zone: full VP development polygon. Control Zone: stable greenbelt.");
 print("3. Click the pop-out arrow -> Download CSV.");
-print("4. MUST Save as: data/raw_telemetry/ee-chart_lst.csv");
+print("4. MUST Save as: data/raw_telemetry/ee-chart_lst_sensitivity.csv");
 print(consolidatedChart);
 
 // ==============================================================================
-// UHI Anomaly: 多年夏季复合（使用三星融合数据）
+// UHI Anomaly: Multi-year summer composite (triple-satellite data)
 // ==============================================================================
 var summerPre  = lstCollection.select('LST_Celsius')
   .filter(ee.Filter.calendarRange(6, 8, 'month'))
@@ -204,7 +204,7 @@ var anomalyPost = summerPost.subtract(ee.Number(meanPost.get('LST_Celsius'))).re
 var thermodynamicScar = anomalyPost.subtract(anomalyPre);
 
 // ==============================================================================
-// 地图渲染
+// Map Visualisation
 // ==============================================================================
 var anomalyVis = {
   min: -2, max: 4,

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 02_spatial_projection.py
-WGS84 GeoJSON -> EPSG:27700 面积计算 & 电力节点统计
+WGS84 GeoJSON -> EPSG:27700 area calculation & power node count
 Expanded: Calculates area for ALL impervious surface categories,
 not just amenity=parking. Uses shapely.unary_union to deduplicate
 overlapping polygons.
@@ -59,7 +59,7 @@ def run_spatial_audit(file_path):
             logger.error("Invalid JSON: %s", file_path)
             return {}, 0.0, 0
 
-    # 记录数据提取元信息
+    # Log data extraction metadata
     timestamp = data.get('timestamp') or data.get('osm3s', {}).get('timestamp_osm_base', 'unknown')
     logger.info("OSM data timestamp: %s | File: %s", timestamp, os.path.basename(file_path))
 

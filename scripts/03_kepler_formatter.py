@@ -1,6 +1,6 @@
 """
 03_kepler_formatter.py
-从 GeoJSON 提取 Power Nodes + 全部不透水面要素，输出 Kepler.gl CSV
+Extract power nodes + all impervious surface features from GeoJSON, output Kepler.gl CSV
 Expanded: Extracts parking, industrial landuse, paved service roads,
 buildings, and power infrastructure — matching the expanded OSM query.
 """
@@ -37,7 +37,7 @@ def _classify_for_kepler(props):
 
 
 def extract_features_for_kepler(file_path, sector_name):
-    """提取电力节点 (Point) 和不透水面质心 (Polygon centroid)，返回 dict 列表"""
+    """Extract power node points and impervious surface centroids, return list of dicts."""
     features_list = []
     
     if not os.path.exists(file_path):

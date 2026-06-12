@@ -8,8 +8,8 @@
 var START_DATE = '2015-01-01';
 var END_DATE   = '2026-03-15';
 
-// 1. Impact Zone — 对于 MODIS 的 500m 分辨率，我们必须使用 1km² 的 VP 开发多边形
-// 才能捕获足够多（约 4 个）有效像元。单单停车场太小了。
+// 1. Impact Zone — for MODIS 500m resolution, we must use the ~1 km² VP development polygon
+// to capture enough (~4) valid pixels. The parking lot alone is too small.
 var sprawlZone = ee.Geometry.Polygon([[
   [-0.4758927487043363, 51.41217153384681],
   [-0.47417613493480504, 51.409200313379166],
@@ -22,11 +22,11 @@ var sprawlZone = ee.Geometry.Polygon([[
   [-0.4758927487043363, 51.41217153384681]
 ]]);
 
-// 2. 对照区（未开发公园）
+// 2. Control Zone (undeveloped parkland)
 var controlZone = ee.Geometry.Point([-0.4104592619093905, 51.40739479750269]).buffer(500);
 
 // ==============================================================================
-// 提取 MODIS ET 数据
+// Extract MODIS ET data
 // ==============================================================================
 var modisET = ee.ImageCollection('MODIS/061/MOD16A2GF')
   .filterDate(START_DATE, END_DATE)
@@ -41,7 +41,7 @@ function prepET(image) {
 var etCollection = modisET.map(prepET);
 
 // ==============================================================================
-// 转换为时间序列 CSV 的提取函数
+// Time series extraction for CSV export
 // ==============================================================================
 var extractStats = function(image) {
   var spMean = image.reduceRegion({
@@ -73,14 +73,14 @@ var etChart = ui.Chart.feature.byFeature({
   colors: ['#FF8C00', '#33CC33'] // Orange for Sprawl, Green for Control
 });
 
-print("【ACTION REQUIRED】");
+print("[ACTION REQUIRED]");
 print("1. MODIS 8-Day Evapotranspiration Time Series.");
 print("2. Click the pop-out arrow -> Download CSV.");
 print("3. MUST Save as: data/raw_telemetry/ee-chart_et.csv");
 print(etChart);
 
 // ==============================================================================
-// 可视化
+// Map visualisation
 // ==============================================================================
 Map.centerObject(sprawlZone, 13);
 Map.setOptions('SATELLITE');
