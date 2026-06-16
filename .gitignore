@@ -38,8 +38,14 @@ _CURRENT_STATE_SUMMARY_*.md
 _RIGOROUS_AUDIT_*.md
 _METHODOLOGY_*.md
 _OPUS_*.md
+_PROJECT_MINDMAP_*.md
 walkthrough_TIER2_*.md
 _agent_memory_snapshot_*/
+
+# Dated deck revisions — PRIVATE (contain PhD-positioning / political-economy slides).
+# The original course deck (Forensic Spatial Audit Shepperton.pptx/.pdf) stays tracked.
+Forensic_Audit_Shepperton/*_2026-*.pptx
+Forensic_Audit_Shepperton/*_2026-*.pdf
 
 # Office lock/owner files
 ~$*
