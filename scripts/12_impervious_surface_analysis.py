@@ -45,9 +45,9 @@ EIA_DATA = {
     'construction_start': '2019-06',
     'construction_end': '2023-12',          # Approximate completion
     'new_stages': 17,                       # Additional sound stages
-    'parking_spaces': 2300,                 # New parking spaces
+    'parking_spaces': 2595,                 # New parking spaces (EIA Zone C, authoritative)
     'description': 'EXPANSION of film studio production facilities including '
-                   '17 new stages, workshops, offices, and 2,300 parking spaces'
+                   '17 new stages, workshops, offices, and 2,595 parking spaces'
 }
 
 # Penman-Monteith reference parameters for UK lowland summer

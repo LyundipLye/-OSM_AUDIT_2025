@@ -20,7 +20,29 @@ pyvenv.cfg
 data/processed/*.csv
 *.tmp
 
+# Large raw NetCDF (HadUK-Grid etc.) — reproducible from CEDA, do not commit (~40MB/file)
+*.nc
+data/raw_telemetry/haduk_1km_2026-06-15/
+
 # IDE
 .vscode/
 .idea/
 *.swp
+
+# Internal strategy / handoff / agent notes — PRIVATE, never publish to the public repo
+# (contain PhD-positioning strategy and references to personal legal/immigration matters)
+_HANDOFF_STATE_*.md
+_PHD_SEED_FRAMING_*.md
+_ARGUMENT_ALIGNMENT_*.md
+_CURRENT_STATE_SUMMARY_*.md
+_RIGOROUS_AUDIT_*.md
+_METHODOLOGY_*.md
+_OPUS_*.md
+walkthrough_TIER2_*.md
+_agent_memory_snapshot_*/
+
+# Office lock/owner files
+~$*
+
+# Redundant raw download (the extracted folder is kept)
+data/raw_telemetry/*.zip
